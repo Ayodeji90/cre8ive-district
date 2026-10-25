@@ -1,9 +1,4 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false,
-  "rewrites": [
-    { "source": "/services", "destination": "/Services/index.html" },
-    { "source": "/about",    "destination": "/About/index.html" },
-    { "source": "/contact",  "destination": "/Contact/index.html" }
-  ]
+  "trailingSlash": false
 }

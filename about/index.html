@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Cre8ive District | A Graceman IT Concepts Company</title>
+<meta name="description" content="Cre8ive District is a full-service creative agency based in Lagos, Nigeria. We combine branding, development and advertising under one roof to help businesses grow.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110F;--bg-alt:#1E1915;--card:#2A241E;--line:#3A332B;
+    --ink:#F4EFE6;--muted:#CFC8BA;--dim:#8F8678;--accent:#FF5A2B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.5}
+  .wrap{max-width:1440px;margin:0 auto}
+  h1,h2,h3,h4,.brand{font-family:'Bricolage Grotesque',sans-serif}
+  a{color:inherit;text-decoration:none}
+  .accent{color:var(--accent)}
+  .btn{display:inline-block;border-radius:999px;font-weight:700;transition:transform .15s ease,opacity .15s ease}
+  .btn:hover{transform:translateY(-2px);opacity:.92}
+  .btn-accent{background:var(--accent);color:var(--bg)}
+  section{padding:96px 48px}
+  #menu-toggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);font:inherit;padding:10px 16px;border-radius:999px;cursor:pointer}
+  header .bar{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;padding:24px 48px}
+  .brand{font-weight:800;font-size:24px}
+  nav{display:flex;flex-wrap:wrap;gap:24px;align-items:center;font-size:15px}
+  nav a:not(.btn){color:var(--muted);transition:color .15s ease}
+  nav a:not(.btn):hover{color:var(--ink)}
+  footer{padding:32px 48px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--dim);font-size:14px}
+  footer a{color:var(--dim);transition:color .15s}
+  footer a:hover{color:var(--ink)}
+
+  .page-hero{padding:80px 48px 64px;max-width:1100px}
+  .page-hero h1{font-weight:800;font-size:clamp(40px,6vw,72px);line-height:1;margin:16px 0 24px}
+  .page-hero p{font-size:20px;color:var(--muted);max-width:640px;line-height:1.5}
+
+  .story{padding:0 48px 96px}
+  .story-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+  .story h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:20px}
+  .story p{color:var(--muted);font-size:17px;line-height:1.7;margin-bottom:16px}
+  .story p strong{color:var(--ink);font-weight:700}
+
+  .values{background:var(--bg-alt);padding:96px 48px}
+  .values h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:48px}
+  .values-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:32px;max-width:1100px;margin:0 auto}
+  .value{border-top:3px solid var(--accent);padding:24px 0}
+  .value h3{font-size:24px;margin-bottom:8px}
+  .value p{color:var(--muted);line-height:1.6}
+
+  .team{padding:96px 48px}
+  .team h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:16px}
+  .team .lead{color:var(--muted);font-size:18px;margin-bottom:48px;max-width:640px}
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:1100px;margin:0 auto}
+  .member{background:var(--card);border-radius:20px;padding:32px;text-align:center}
+  .member-avatar{width:80px;height:80px;border-radius:50%;background:var(--bg-alt);border:2px solid var(--line);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:var(--accent);font-family:'Bricolage Grotesque',sans-serif}
+  .member h3{font-size:20px;margin-bottom:4px}
+  .member .title{color:var(--dim);font-size:14px;margin-bottom:12px}
+  .member p{color:var(--muted);font-size:14px;line-height:1.5}
+
+  .timeline{background:var(--bg-alt);padding:96px 48px}
+  .timeline h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:48px;max-width:1100px;margin-left:auto;margin-right:auto}
+  .timeline-items{max-width:1100px;margin:0 auto;display:grid;gap:0}
+  .tl-item{display:grid;grid-template-columns:120px 1fr;gap:32px;padding:32px 0;border-top:1px solid var(--line)}
+  .tl-year{font-family:'Bricolage Grotesque',sans-serif;font-size:32px;font-weight:800;color:var(--accent)}
+  .tl-item h3{font-size:20px;margin-bottom:4px}
+  .tl-item p{color:var(--muted);line-height:1.5}
+
+  .cta-band{margin:0 48px 96px;padding:72px 48px;background:var(--accent);color:var(--bg);border-radius:28px;text-align:center}
+  .cta-band h2{font-weight:800;font-size:clamp(32px,4vw,48px);margin:0 auto 16px;max-width:640px;color:var(--bg)}
+  .cta-band p{font-size:18px;margin:0 auto 32px;max-width:520px;color:var(--bg)}
+  .cta-band .btn{padding:18px 32px;font-size:17px}
+  .btn-dark{background:var(--bg);color:var(--ink)}
+
+  @media (max-width:760px){
+    section{padding:72px 24px}
+    header .bar{padding:20px 24px}
+    .page-hero{padding:60px 24px 48px}
+    #menu-toggle{display:inline-block}
+    nav{display:none;position:absolute;right:16px;left:16px;top:76px;background:var(--bg-alt);border:1px solid var(--line);border-radius:16px;padding:20px;flex-direction:column;align-items:flex-start;z-index:50}
+    nav.open{display:flex}
+    header{position:relative}
+    .story{padding:0 24px 72px}
+    .story-inner{grid-template-columns:1fr;gap:32px}
+    .values{padding:72px 24px}
+    .team{padding:72px 24px}
+    .timeline{padding:72px 24px}
+    .tl-item{grid-template-columns:80px 1fr;gap:16px}
+    .cta-band{margin:0 24px 72px;padding:48px 28px}
+    footer{padding:28px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="bar">
+      <a href="/" class="brand">Cre<span class="accent" style="display:inline-block;font-style:italic;transform:scaleY(1.8);transform-origin:center center;line-height:0;vertical-align:middle">8</span>ive District</a>
+      <button id="menu-toggle" aria-label="Open menu" aria-expanded="false">Menu</button>
+      <nav id="site-nav">
+        <a href="/services">Services</a>
+        <a href="/Homepage/#packages">Packages</a>
+        <a href="/about">About</a>
+        <a href="/contact" class="btn btn-accent" style="padding:12px 22px">Start a project</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="page-hero">
+    <div style="font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700">About Us</div>
+    <h1>One team. Three superpowers.</h1>
+    <p>Cre8ive District exists because Nigerian businesses deserve world-class creative work without the world-class price tag or the hassle of juggling five different vendors.</p>
+  </div>
+
+  <div class="story">
+    <div class="story-inner">
+      <div>
+        <h2>The story</h2>
+        <p>Cre8ive District started with a simple frustration: small businesses in Lagos kept getting burned. One vendor designs the logo, another prints the flyers (wrong colors), a freelancer builds the website (then disappears), and nobody's running the ads.</p>
+        <p>We built Cre8ive District to be <strong>the one team that handles everything</strong> — branding, development and promotion — so nothing falls through the cracks and your brand looks the same everywhere.</p>
+        <p>We're a division of <strong>Graceman IT Concepts</strong>, which means we have the tech backbone to build real software alongside the creative muscle to make it beautiful.</p>
+      </div>
+      <div>
+        <h2>What drives us</h2>
+        <p>We believe every business — from a one-person side hustle to a 50-person company — deserves a brand that looks like it means business. Not templated. Not cheap. Not half-done.</p>
+        <p>We price honestly, deliver on time, and stay accountable with clear scopes and no hidden fees. If we say two weeks, we mean two weeks.</p>
+        <p>Our clients don't just get deliverables — they get a creative partner that understands the Nigerian market and knows what actually works here.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="values">
+    <h2 style="max-width:1100px;margin-left:auto;margin-right:auto">Our values</h2>
+    <div class="values-grid">
+      <div class="value">
+        <h3>One roof</h3>
+        <p>Design, development and ads live under the same team. No hand-offs, no translation errors, no version conflicts.</p>
+      </div>
+      <div class="value">
+        <h3>No fluff</h3>
+        <p>We quote what we'll deliver and deliver what we quote. Clear scopes, honest timelines, no surprise invoices.</p>
+      </div>
+      <div class="value">
+        <h3>Built for here</h3>
+        <p>We understand the Nigerian market — Paystack, Flutterwave, WhatsApp-first customers, MTN network realities, SMEDAN constraints. We build for this context.</p>
+      </div>
+      <div class="value">
+        <h3>Quality is the flex</h3>
+        <p>We don't cut corners. Every logo, every line of code, every ad creative gets the same level of craft. Your brand deserves it.</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="team">
+    <h2>The team</h2>
+    <p class="lead">Small team, big output. Everyone here ships, nobody just manages.</p>
+    <div class="team-grid">
+      <div class="member">
+        <div class="member-avatar">CD</div>
+        <h3>Creative Director</h3>
+        <div class="title">Brand Strategy &amp; Design Lead</div>
+        <p>Sets the creative vision. Leads brand identity projects and makes sure every pixel is intentional.</p>
+      </div>
+      <div class="member">
+        <div class="member-avatar">TL</div>
+        <h3>Tech Lead</h3>
+        <div class="title">Web &amp; App Development</div>
+        <p>Architects and builds the digital products — websites, apps, dashboards and integrations.</p>
+      </div>
+      <div class="member">
+        <div class="member-avatar">AM</div>
+        <h3>Ads Manager</h3>
+        <div class="title">Paid Media &amp; Growth</div>
+        <p>Plans campaigns, manages ad spend across Meta, TikTok and Google, and reports what's working.</p>
+      </div>
+      <div class="member">
+        <div class="member-avatar">GD</div>
+        <h3>Graphic Designer</h3>
+        <div class="title">Visual Design &amp; Print</div>
+        <p>Creates the flyers, social posts, packaging and all visual collateral. Handles print production QA.</p>
+      </div>
+      <div class="member">
+        <div class="member-avatar">CM</div>
+        <h3>Content Manager</h3>
+        <div class="title">Social Media &amp; Copy</div>
+        <p>Writes captions, plans content calendars, manages posting schedules and community engagement.</p>
+      </div>
+      <div class="member">
+        <div class="member-avatar">VP</div>
+        <h3>Video Producer</h3>
+        <div class="title">Motion &amp; Video Content</div>
+        <p>Shoots, edits and animates — from 15-second reels to full promo videos and event coverage.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="timeline">
+    <h2>Our journey</h2>
+    <div class="timeline-items">
+      <div class="tl-item">
+        <div class="tl-year">2023</div>
+        <div>
+          <h3>Founded</h3>
+          <p>Cre8ive District launches as a branding-focused arm of Graceman IT Concepts, starting with logo design and print production for Lagos SMEs.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2024</div>
+        <div>
+          <h3>Added development</h3>
+          <p>Web and mobile app development joins the offering. First e-commerce build ships with Paystack integration. Team grows to six.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2025</div>
+        <div>
+          <h3>Ads &amp; promotion launch</h3>
+          <p>Paid ads department opens. First major campaign delivers 2,000+ leads for a fitness brand in three weeks. Monthly retainer clients hit double digits.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2026</div>
+        <div>
+          <h3>Full-service agency</h3>
+          <p>150+ brands served. 80+ digital products shipped. Operating as a true one-stop shop — if your business needs it designed, built or promoted, we do it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-band">
+    <h2>Want to work with us?</h2>
+    <p>We're always looking for ambitious brands to partner with. Let's talk about what you're building.</p>
+    <a href="/contact" class="btn btn-dark">Get in touch</a>
+  </div>
+
+  <footer>
+    <div>Cre8ive District &middot; a Graceman IT Concepts company</div>
+    <div>
+      <a href="/services">Services</a> &middot;
+      <a href="/about">About</a> &middot;
+      <a href="/contact">Contact</a>
+    </div>
+    <div>Lagos, Nigeria &middot; +234 800 000 0000</div>
+  </footer>
+
+</div>
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('site-nav');
+  toggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    toggle.textContent = open ? 'Close' : 'Menu';
+  });
+  nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = 'Menu';
+  }));
+</script>
+</body>
+</html>
