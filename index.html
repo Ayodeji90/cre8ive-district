@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cre8ive District — Branding, Web Development & Ads Agency | Lagos</title>
+<meta name="description" content="Cre8ive District is a full-service creative agency in Lagos. Brand identity, web & app development, print production, and paid ads — all under one roof. A Graceman IT Concepts company.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110F;
+    --bg-alt:#1E1915;
+    --card:#2A241E;
+    --line:#3A332B;
+    --ink:#F4EFE6;
+    --muted:#CFC8BA;
+    --dim:#8F8678;
+    --accent:#FF5A2B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.5}
+  .wrap{max-width:1440px;margin:0 auto}
+  h1,h2,h3,h4,.brand{font-family:'Bricolage Grotesque',sans-serif}
+  a{color:inherit;text-decoration:none}
+  .accent{color:var(--accent)}
+  .btn{display:inline-block;border-radius:999px;font-weight:700;transition:transform .15s ease,opacity .15s ease}
+  .btn:hover{transform:translateY(-2px);opacity:.92}
+  .btn-accent{background:var(--accent);color:var(--bg)}
+  .btn-outline{border:2px solid var(--ink);color:var(--ink)}
+  .btn-dark{background:var(--bg);color:var(--ink)}
+  .btn-outline-dark{border:2px solid var(--bg);color:var(--bg)}
+  section{padding:96px 48px}
+  .eyebrow{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h2{font-weight:700;font-size:clamp(34px,4vw,48px);margin-bottom:48px}
+  .lead{color:var(--muted);font-size:18px;margin:-32px 0 48px}
+  .card{border:2px solid var(--line);border-radius:20px;padding:32px;transition:border-color .2s ease}
+  .card:hover{border-color:var(--accent)}
+  .card .price{font-size:28px;font-weight:700;color:var(--accent);margin:8px 0 20px}
+  .card ul{list-style:none;color:var(--muted);line-height:1.8}
+  .badge{border:2px solid var(--accent);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--accent)}
+
+  header .bar{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;padding:24px 48px}
+  .brand{font-weight:800;font-size:24px}
+  nav{display:flex;flex-wrap:wrap;gap:24px;align-items:center;font-size:15px}
+  nav a:not(.btn){color:var(--muted);transition:color .15s ease}
+  nav a:not(.btn):hover{color:var(--ink)}
+  #menu-toggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);font:inherit;padding:10px 16px;border-radius:999px;cursor:pointer}
+
+  .hero{padding:96px 48px 112px;max-width:1100px}
+  .hero h1{font-weight:800;font-size:clamp(52px,7.5vw,96px);line-height:.98;margin:24px 0 32px}
+  .hero p{font-size:22px;line-height:1.5;max-width:640px;margin:0 0 40px;color:var(--muted)}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:16px}
+  .hero-cta .btn{padding:18px 32px;font-size:17px}
+
+  .services{background:var(--bg-alt)}
+  .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+  .service{border-top:3px solid var(--accent);padding:24px 0}
+  .service .num{color:var(--accent);font-weight:700}
+  .service h3{font-size:28px;margin:8px 0}
+  .service p{color:var(--muted);line-height:1.55;margin:0}
+
+  .packages-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+  .package h3{font-size:26px;margin:0 0 8px}
+  .package.featured{border-color:var(--accent)}
+  .package .per{font-size:.55em;font-weight:700;color:var(--muted)}
+
+  .process{background:var(--bg-alt)}
+  .process-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px}
+  .step .n{font-family:'Bricolage Grotesque',sans-serif;font-size:56px;font-weight:800;color:var(--accent)}
+  .step h3{margin:0 0 8px;font-size:22px}
+  .step p{color:var(--muted);line-height:1.5;margin:0}
+
+  .work-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}
+  .work-item{min-height:300px;border-radius:20px;background:var(--card);padding:32px;display:flex;flex-direction:column;justify-content:flex-end;transition:transform .2s ease;position:relative;overflow:hidden}
+  .work-item:hover{transform:translateY(-4px)}
+  .work-item .work-tag{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+  .work-item h3{font-size:22px;margin-bottom:4px}
+  .work-item p{color:var(--muted);font-size:14px;margin:0}
+
+  .testimonials{background:var(--bg-alt)}
+  .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+  .testimonial{border:1px solid var(--line);border-radius:20px;padding:32px}
+  .testimonial blockquote{color:var(--muted);font-size:16px;line-height:1.6;margin:0 0 20px;font-style:italic}
+  .testimonial .author{font-weight:700;font-size:15px}
+  .testimonial .role{color:var(--dim);font-size:13px}
+  .stars{color:var(--accent);font-size:18px;margin-bottom:12px;letter-spacing:2px}
+
+  .contact{margin:0 48px 96px;padding:72px 48px;background:var(--accent);color:var(--bg);border-radius:28px}
+  .contact h2{font-weight:800;font-size:clamp(38px,4.5vw,56px);line-height:1.05;margin:0 0 20px;max-width:720px;color:var(--bg)}
+  .contact p{font-size:20px;margin:0 0 32px;max-width:560px;color:var(--bg)}
+  .contact .cta{display:flex;flex-wrap:wrap;gap:16px}
+  .contact .btn{padding:18px 32px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;padding:64px 48px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .stat .number{font-family:'Bricolage Grotesque',sans-serif;font-size:48px;font-weight:800;color:var(--accent)}
+  .stat .label{color:var(--muted);font-size:15px;margin-top:4px}
+
+  footer{padding:32px 48px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--dim);font-size:14px}
+  footer a{color:var(--dim);transition:color .15s}
+  footer a:hover{color:var(--ink)}
+
+  @media (max-width:760px){
+    section{padding:72px 24px}
+    header .bar{padding:20px 24px}
+    .hero{padding:72px 24px}
+    #menu-toggle{display:inline-block}
+    nav{display:none;position:absolute;right:16px;left:16px;top:76px;background:var(--bg-alt);border:1px solid var(--line);border-radius:16px;padding:20px;flex-direction:column;align-items:flex-start;z-index:50}
+    nav.open{display:flex}
+    header{position:relative}
+    .contact{margin:0 24px 72px;padding:48px 28px}
+    footer{padding:28px 24px}
+    .stats{padding:48px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="bar">
+      <a href="/" class="brand">Cre<span class="accent" style="display:inline-block;font-style:italic;transform:scaleY(1.8);transform-origin:center center;line-height:0;vertical-align:middle">8</span>ive District</a>
+      <button id="menu-toggle" aria-label="Open menu" aria-expanded="false">Menu</button>
+      <nav id="site-nav">
+        <a href="/services">Services</a>
+        <a href="#packages">Packages</a>
+        <a href="/about">About</a>
+        <a href="/contact" class="btn btn-accent" style="padding:12px 22px">Start a project</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">Branding &middot; Development &middot; Ads</div>
+    <h1>Build it. Brand it.<br>Promote it.</h1>
+    <p>From logo to landing page to launch campaign — Cre8ive District is the one-stop creative agency that designs your brand, builds your digital products, and runs the ads that bring customers in. One team, start to finish.</p>
+    <div class="hero-cta">
+      <a href="/contact" class="btn btn-accent">Get a free consultation</a>
+      <a href="#packages" class="btn btn-outline">See packages</a>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="number">150+</div><div class="label">Brands built</div></div>
+    <div class="stat"><div class="number">80+</div><div class="label">Websites &amp; apps shipped</div></div>
+    <div class="stat"><div class="number">5M+</div><div class="label">Ad impressions delivered</div></div>
+    <div class="stat"><div class="number">3yrs</div><div class="label">In the game</div></div>
+  </div>
+
+  <section id="services" class="services">
+    <h2>What we do</h2>
+    <div class="services-grid">
+      <div class="service"><div class="num">01</div><h3>Brand identity</h3><p>Logos, color systems, typography and brand guidelines that make your business look credible and consistent everywhere.</p></div>
+      <div class="service"><div class="num">02</div><h3>Flyers &amp; print</h3><p>Flyers, banners, business cards, packaging and merch — designed and printed in-house so nothing gets lost in translation.</p></div>
+      <div class="service"><div class="num">03</div><h3>Web development</h3><p>Responsive websites, landing pages and web apps built to convert visitors into customers. Clean code, fast load times.</p></div>
+      <div class="service"><div class="num">04</div><h3>Mobile apps</h3><p>Custom iOS and Android apps for your business — from concept to app store. We build tools your customers actually use.</p></div>
+      <div class="service"><div class="num">05</div><h3>Paid ads</h3><p>Meta, TikTok, Google and X ads managed end-to-end. We plan the strategy, create the visuals, run the campaigns and report the results.</p></div>
+      <div class="service"><div class="num">06</div><h3>Social media</h3><p>Monthly content calendars, designed posts, reels and stories so your pages stay active, on-brand and growing.</p></div>
+      <div class="service"><div class="num">07</div><h3>Video &amp; motion</h3><p>Short-form promos, product videos, reels and animated ads that stop the scroll and explain what you do fast.</p></div>
+      <div class="service"><div class="num">08</div><h3>Campaigns</h3><p>Product launches, promos and events planned and executed as one connected story across print, digital and paid media.</p></div>
+    </div>
+  </section>
+
+  <section id="packages">
+    <h2>Packages</h2>
+    <p class="lead">Clear scopes, honest pricing. Custom quotes always available.</p>
+    <div class="packages-grid">
+      <div class="card package">
+        <h3>Starter Brand Kit</h3>
+        <div class="price">&#8358;150,000</div>
+        <ul>
+          <li>Logo design (3 concepts)</li>
+          <li>Color palette &amp; fonts</li>
+          <li>Social media templates (5)</li>
+          <li>Business card design</li>
+          <li>Brand guidelines PDF</li>
+        </ul>
+      </div>
+      <div class="card package featured">
+        <span class="badge">Most popular</span>
+        <h3 style="margin-top:12px">Monthly Content</h3>
+        <div class="price">&#8358;250,000 <span class="per">/ month</span></div>
+        <ul>
+          <li>15 designed posts</li>
+          <li>4 short-form videos / reels</li>
+          <li>Captions &amp; posting schedule</li>
+          <li>Story templates</li>
+          <li>Monthly performance review</li>
+        </ul>
+      </div>
+      <div class="card package">
+        <h3>Campaign Launch</h3>
+        <div class="price">&#8358;350,000</div>
+        <ul>
+          <li>Campaign concept &amp; messaging</li>
+          <li>Flyers, banners &amp; digital ads</li>
+          <li>Promo video (30-60s)</li>
+          <li>Print production</li>
+          <li>2-week ad management</li>
+        </ul>
+      </div>
+      <div class="card package">
+        <h3>Business Website</h3>
+        <div class="price">&#8358;400,000</div>
+        <ul>
+          <li>Up to 5 pages</li>
+          <li>Mobile-responsive design</li>
+          <li>Contact form &amp; WhatsApp</li>
+          <li>SEO basics &amp; speed optimisation</li>
+          <li>Domain &amp; hosting setup</li>
+        </ul>
+      </div>
+      <div class="card package">
+        <h3>Ads Management</h3>
+        <div class="price">&#8358;200,000 <span class="per">/ month</span></div>
+        <ul>
+          <li>Meta (Facebook &amp; Instagram) ads</li>
+          <li>Ad creative design (6/month)</li>
+          <li>Audience targeting &amp; A/B testing</li>
+          <li>Weekly performance reports</li>
+          <li>Ad spend not included</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="process" class="process">
+    <h2>How we work</h2>
+    <div class="process-grid">
+      <div class="step"><div class="n">1</div><h3>Brief</h3><p>We learn your business, audience and goals in a free discovery call.</p></div>
+      <div class="step"><div class="n">2</div><h3>Concept</h3><p>We present creative directions, mockups or strategies for you to react to.</p></div>
+      <div class="step"><div class="n">3</div><h3>Create</h3><p>We design, build, refine and revise until it's exactly right.</p></div>
+      <div class="step"><div class="n">4</div><h3>Launch</h3><p>We deliver final files, push code live, or launch your ads — and track what happens next.</p></div>
+    </div>
+  </section>
+
+  <section id="work">
+    <h2>Selected work</h2>
+    <div class="work-grid">
+      <div class="work-item">
+        <div class="work-tag">Brand Identity</div>
+        <h3>Luxe Bistro Lagos</h3>
+        <p>Full rebrand — logo, menu design, signage and social media kit for a premium restaurant launch.</p>
+      </div>
+      <div class="work-item">
+        <div class="work-tag">Web Development</div>
+        <h3>PayStack-integrated E-commerce</h3>
+        <p>Custom online store with Paystack checkout, inventory dashboard and mobile-first design.</p>
+      </div>
+      <div class="work-item">
+        <div class="work-tag">Paid Ads Campaign</div>
+        <h3>FitLife Gym Launch</h3>
+        <p>Meta &amp; TikTok campaign that generated 2,000+ sign-up leads in 3 weeks with &#8358;180k ad spend.</p>
+      </div>
+      <div class="work-item">
+        <div class="work-tag">Mobile App</div>
+        <h3>QuickDash Logistics</h3>
+        <p>Rider and customer apps for a Lagos delivery startup — real-time tracking, in-app payments.</p>
+      </div>
+      <div class="work-item">
+        <div class="work-tag">Campaign + Print</div>
+        <h3>Detty December Festival</h3>
+        <p>Event branding, 10,000 flyers, venue signage, social content and influencer-driven ad campaign.</p>
+      </div>
+      <div class="work-item">
+        <div class="work-tag">Social Media</div>
+        <h3>Glow Beauty NG</h3>
+        <p>6-month content retainer — grew Instagram from 800 to 15,000 followers with consistent branded content.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <h2>What our clients say</h2>
+    <div class="testimonials-grid">
+      <div class="testimonial">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>"Cre8ive District built our website and handled our launch campaign. We went from zero online presence to fully booked in six weeks. These guys understand hustle."</blockquote>
+        <div class="author">Chioma A.</div>
+        <div class="role">Founder, Luxe Bistro Lagos</div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>"They designed our logo, built our app and now manage our ads. Having everything under one roof saves us so much time and money. Highly recommend."</blockquote>
+        <div class="author">Tunde O.</div>
+        <div class="role">CEO, QuickDash Logistics</div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>"Our social media was dead before Cre8ive District took over. Now we get DMs from new customers every single day. The content is always on point."</blockquote>
+        <div class="author">Aisha M.</div>
+        <div class="role">Owner, Glow Beauty NG</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="contact" class="contact">
+    <h2>Ready to build something?</h2>
+    <p>Tell us what you're working on — a brand, a website, an ad campaign, or all three. We'll reply with next steps and a quote within 24 hours.</p>
+    <div class="cta">
+      <a href="https://wa.me/2348000000000" class="btn btn-dark">Chat on WhatsApp</a>
+      <a href="mailto:hello@cre8ivedistrict.com" class="btn btn-outline-dark">hello@cre8ivedistrict.com</a>
+    </div>
+  </div>
+
+  <footer>
+    <div>Cre8ive District &middot; a Graceman IT Concepts company</div>
+    <div>
+      <a href="/services">Services</a> &middot;
+      <a href="/about">About</a> &middot;
+      <a href="/contact">Contact</a>
+    </div>
+    <div>Lagos, Nigeria &middot; +234 800 000 0000</div>
+  </footer>
+
+</div>
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('site-nav');
+  toggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    toggle.textContent = open ? 'Close' : 'Menu';
+  });
+  nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = 'Menu';
+  }));
+</script>
+</body>
+</html>
