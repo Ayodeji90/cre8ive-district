@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Services — Cre8ive District | Branding, Dev & Ads Agency Lagos</title>
+<meta name="description" content="Explore Cre8ive District's services: brand identity, flyers & print, web development, mobile apps, paid advertising, social media management, video production and campaign strategy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110F;--bg-alt:#1E1915;--card:#2A241E;--line:#3A332B;
+    --ink:#F4EFE6;--muted:#CFC8BA;--dim:#8F8678;--accent:#FF5A2B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.5}
+  .wrap{max-width:1440px;margin:0 auto}
+  h1,h2,h3,h4,.brand{font-family:'Bricolage Grotesque',sans-serif}
+  a{color:inherit;text-decoration:none}
+  .accent{color:var(--accent)}
+  .btn{display:inline-block;border-radius:999px;font-weight:700;transition:transform .15s ease,opacity .15s ease}
+  .btn:hover{transform:translateY(-2px);opacity:.92}
+  .btn-accent{background:var(--accent);color:var(--bg)}
+  .btn-outline{border:2px solid var(--ink);color:var(--ink)}
+  section{padding:96px 48px}
+  #menu-toggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);font:inherit;padding:10px 16px;border-radius:999px;cursor:pointer}
+  header .bar{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;padding:24px 48px}
+  .brand{font-weight:800;font-size:24px}
+  nav{display:flex;flex-wrap:wrap;gap:24px;align-items:center;font-size:15px}
+  nav a:not(.btn){color:var(--muted);transition:color .15s ease}
+  nav a:not(.btn):hover{color:var(--ink)}
+  footer{padding:32px 48px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--dim);font-size:14px}
+  footer a{color:var(--dim);transition:color .15s}
+  footer a:hover{color:var(--ink)}
+
+  .page-hero{padding:80px 48px 64px;max-width:1100px}
+  .page-hero h1{font-weight:800;font-size:clamp(40px,6vw,72px);line-height:1;margin:16px 0 24px}
+  .page-hero p{font-size:20px;color:var(--muted);max-width:640px;line-height:1.5}
+
+  .pillar{padding:80px 48px;border-top:1px solid var(--line)}
+  .pillar:nth-child(even){background:var(--bg-alt)}
+  .pillar-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+  .pillar-label{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px}
+  .pillar h2{font-size:clamp(30px,4vw,44px);font-weight:800;margin-bottom:16px}
+  .pillar p{color:var(--muted);font-size:17px;line-height:1.6;margin-bottom:16px}
+  .pillar ul{list-style:none;margin:16px 0 24px}
+  .pillar ul li{color:var(--muted);line-height:2;padding-left:24px;position:relative}
+  .pillar ul li::before{content:"";position:absolute;left:0;top:12px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .pillar .btn{padding:14px 28px;font-size:15px}
+
+  .cta-band{margin:0 48px 96px;padding:72px 48px;background:var(--accent);color:var(--bg);border-radius:28px;text-align:center}
+  .cta-band h2{font-weight:800;font-size:clamp(32px,4vw,48px);margin:0 auto 16px;max-width:640px;color:var(--bg)}
+  .cta-band p{font-size:18px;margin:0 auto 32px;max-width:520px;color:var(--bg)}
+  .cta-band .btn{padding:18px 32px;font-size:17px}
+  .btn-dark{background:var(--bg);color:var(--ink)}
+
+  @media (max-width:760px){
+    section{padding:72px 24px}
+    header .bar{padding:20px 24px}
+    .page-hero{padding:60px 24px 48px}
+    #menu-toggle{display:inline-block}
+    nav{display:none;position:absolute;right:16px;left:16px;top:76px;background:var(--bg-alt);border:1px solid var(--line);border-radius:16px;padding:20px;flex-direction:column;align-items:flex-start;z-index:50}
+    nav.open{display:flex}
+    header{position:relative}
+    .pillar{padding:64px 24px}
+    .pillar-inner{grid-template-columns:1fr;gap:32px}
+    .cta-band{margin:0 24px 72px;padding:48px 28px}
+    footer{padding:28px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="bar">
+      <a href="/" class="brand">Cre<span class="accent">8</span>ive District</a>
+      <button id="menu-toggle" aria-label="Open menu" aria-expanded="false">Menu</button>
+      <nav id="site-nav">
+        <a href="/Services/">Services</a>
+        <a href="/Homepage/#packages">Packages</a>
+        <a href="/About/">About</a>
+        <a href="/Contact/" class="btn btn-accent" style="padding:12px 22px">Start a project</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="page-hero">
+    <div style="font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700">Our Services</div>
+    <h1>Everything your brand needs to win.</h1>
+    <p>We don't just make things look good — we build the systems that get your business seen, trusted and paid. Three departments, one team.</p>
+  </div>
+
+  <!-- BRANDING & DESIGN -->
+  <div class="pillar" id="branding">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 01</div>
+        <h2>Branding &amp; Design</h2>
+        <p>Your brand is the first thing people judge. We create identities that look premium, feel consistent and work across every surface — screen, paper, signage and merch.</p>
+        <p>Whether you're starting fresh or rebranding, we handle the full process: research, concept, design, production and delivery.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Logo design &amp; brand marks</li>
+          <li>Color systems &amp; typography</li>
+          <li>Brand guidelines &amp; style guides</li>
+          <li>Business cards &amp; stationery</li>
+          <li>Flyers, banners &amp; posters</li>
+          <li>Packaging &amp; label design</li>
+          <li>Signage &amp; environmental graphics</li>
+          <li>Merch design (T-shirts, caps, totes)</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get a branding quote</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINT PRODUCTION -->
+  <div class="pillar" id="print">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 02</div>
+        <h2>Print Production</h2>
+        <p>We don't hand off files and hope for the best. Our in-house print production means your designs come out exactly as intended — colors matched, stock selected, finish applied.</p>
+        <p>From 100 business cards to 10,000 event flyers, we handle the full run.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Offset &amp; digital printing</li>
+          <li>Large-format banners &amp; flex</li>
+          <li>Business cards (matte, gloss, foil)</li>
+          <li>Flyers &amp; brochures</li>
+          <li>Packaging &amp; product labels</li>
+          <li>Event materials &amp; backdrops</li>
+          <li>Branded merchandise</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get a print quote</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEB & APP DEVELOPMENT -->
+  <div class="pillar" id="development">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 03</div>
+        <h2>Web &amp; App Development</h2>
+        <p>A good website is your hardest-working employee. We build fast, responsive websites and mobile apps that convert visitors into customers — and give you the tools to manage your own content.</p>
+        <p>We handle everything from domain setup to deployment, and we don't disappear after launch.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Business &amp; corporate websites</li>
+          <li>E-commerce stores (Paystack, Flutterwave)</li>
+          <li>Landing pages &amp; funnels</li>
+          <li>Custom web applications</li>
+          <li>iOS &amp; Android mobile apps</li>
+          <li>Admin dashboards &amp; portals</li>
+          <li>Domain, hosting &amp; SSL setup</li>
+          <li>Ongoing maintenance &amp; support</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get a dev quote</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAID ADS & PROMOTION -->
+  <div class="pillar" id="ads">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 04</div>
+        <h2>Paid Ads &amp; Promotion</h2>
+        <p>Great design without traffic is a billboard in the desert. We plan, create and manage paid ad campaigns that put your business in front of the right people, on the right platforms, at the right time.</p>
+        <p>We handle everything from strategy and creative to targeting, optimisation and reporting.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Meta ads (Facebook &amp; Instagram)</li>
+          <li>TikTok ads</li>
+          <li>Google Search &amp; Display ads</li>
+          <li>X (Twitter) promotions</li>
+          <li>Ad creative design &amp; copywriting</li>
+          <li>Audience research &amp; targeting</li>
+          <li>A/B testing &amp; optimisation</li>
+          <li>Weekly &amp; monthly performance reports</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get an ads quote</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL MEDIA & CONTENT -->
+  <div class="pillar" id="social">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 05</div>
+        <h2>Social Media &amp; Content</h2>
+        <p>Consistency wins on social. We create monthly content plans, design your posts, shoot your videos and give you a schedule you can follow — or we post for you.</p>
+        <p>Your pages stay active, on-brand and always growing.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Content strategy &amp; calendars</li>
+          <li>Designed posts &amp; carousels</li>
+          <li>Short-form video (reels, TikToks)</li>
+          <li>Story templates &amp; highlights</li>
+          <li>Captions &amp; hashtag research</li>
+          <li>Community management</li>
+          <li>Monthly analytics &amp; growth reports</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get a content quote</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO & MOTION -->
+  <div class="pillar" id="video">
+    <div class="pillar-inner">
+      <div>
+        <div class="pillar-label">Department 06</div>
+        <h2>Video &amp; Motion</h2>
+        <p>Video is the format that moves people. We produce short-form ads, product demos, explainer animations and event recaps that tell your story in under 60 seconds.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Product &amp; brand promo videos</li>
+          <li>Social media reels &amp; TikToks</li>
+          <li>Motion graphics &amp; animation</li>
+          <li>Event coverage &amp; recap edits</li>
+          <li>Testimonial &amp; interview videos</li>
+          <li>Ad video creatives</li>
+        </ul>
+        <a href="/Contact/" class="btn btn-accent">Get a video quote</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-band">
+    <h2>Not sure what you need?</h2>
+    <p>Book a free 15-minute discovery call. We'll figure out the right mix of services for your business and budget.</p>
+    <a href="/Contact/" class="btn btn-dark">Book a free call</a>
+  </div>
+
+  <footer>
+    <div>Cre8ive District &middot; a Graceman IT Concepts company</div>
+    <div>
+      <a href="/Services/">Services</a> &middot;
+      <a href="/About/">About</a> &middot;
+      <a href="/Contact/">Contact</a>
+    </div>
+    <div>Lagos, Nigeria &middot; +234 800 000 0000</div>
+  </footer>
+
+</div>
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('site-nav');
+  toggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    toggle.textContent = open ? 'Close' : 'Menu';
+  });
+  nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = 'Menu';
+  }));
+</script>
+</body>
+</html>
