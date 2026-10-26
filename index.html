@@ -3,121 +3,451 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cre8ive District — Branding, Web Development & Ads Agency | Lagos</title>
-<meta name="description" content="Cre8ive District is a full-service creative agency in Lagos. Brand identity, web & app development, print production, and paid ads — all under one roof. A Graceman IT Concepts company.">
+<title>Cre8ive District — Branding, Digital Development & Advertising | Lagos</title>
+<meta name="description" content="Cre8ive District is a full-service creative agency in Lagos. We build brands people trust, create digital experiences that convert, and run advertising that grows businesses. A Graceman IT Concepts company.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#14110F;
-    --bg-alt:#1E1915;
-    --card:#2A241E;
-    --line:#3A332B;
-    --ink:#F4EFE6;
-    --muted:#CFC8BA;
-    --dim:#8F8678;
-    --accent:#FF5A2B;
+    --bg:#0A0A0A;
+    --bg-alt:#101010;
+    --card:#141414;
+    --line:#292929;
+    --ink:#F4F0EA;
+    --muted:#B7B4B0;
+    --dim:#85817D;
+    --accent:#FF5728;
+    --accent-hover:#FF7043;
+    --overlay:rgba(0,0,0,0.35);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.5}
-  .wrap{max-width:1440px;margin:0 auto}
-  h1,h2,h3,h4,.brand{font-family:'Bricolage Grotesque',sans-serif}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *, *::before, *::after{animation-duration:0.01ms !important;transition-duration:0.01ms !important}
+  }
+  body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;line-height:1.6}
+  .wrap{max-width:1400px;margin:0 auto;padding:0 clamp(24px,5vw,80px)}
+  h1,h2,h3,h4,.brand{font-family:'Plus Jakarta Sans',sans-serif}
   a{color:inherit;text-decoration:none}
   .accent{color:var(--accent)}
-  .btn{display:inline-block;border-radius:999px;font-weight:700;transition:transform .15s ease,opacity .15s ease}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:700;font-size:clamp(12px,1.5vw,14px);padding:14px 28px;transition:transform .15s ease,opacity .15s ease,background .15s ease,border-color .15s ease;cursor:pointer;border:none}
   .btn:hover{transform:translateY(-2px);opacity:.92}
-  .btn-accent{background:var(--accent);color:var(--bg)}
-  .btn-outline{border:2px solid var(--ink);color:var(--ink)}
-  .btn-dark{background:var(--bg);color:var(--ink)}
-  .btn-outline-dark{border:2px solid var(--bg);color:var(--bg)}
-  section{padding:96px 48px}
-  .eyebrow{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700}
-  h2{font-weight:700;font-size:clamp(34px,4vw,48px);margin-bottom:48px}
-  .lead{color:var(--muted);font-size:18px;margin:-32px 0 48px}
-  .card{border:2px solid var(--line);border-radius:20px;padding:32px;transition:border-color .2s ease}
-  .card:hover{border-color:var(--accent)}
-  .card .price{font-size:28px;font-weight:700;color:var(--accent);margin:8px 0 20px}
-  .card ul{list-style:none;color:var(--muted);line-height:1.8}
-  .badge{border:2px solid var(--accent);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn-primary{background:var(--accent);color:var(--bg)}
+  .btn-primary:hover{background:var(--accent-hover)}
+  .btn-secondary{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+  .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+  section{padding:clamp(64px,8vw,96px) 0}
+  .eyebrow{font-size:clamp(10px,1.2vw,12px);letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);font-weight:700;display:block;margin-bottom:16px}
+  h2{font-weight:750;font-size:clamp(30px,4vw,42px);line-height:1.1;letter-spacing:-0.02em;margin-bottom:clamp(16px,2vw,24px)}
+  h3{font-weight:700;font-size:clamp(18px,2.2vw,22px);line-height:1.2;letter-spacing:-0.01em}
+  p{font-size:clamp(14px,1.6vw,16px);line-height:1.7;color:var(--muted)}
+  .section-divider{border-top:1px solid var(--line);margin:0}
 
-  header .bar{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;padding:24px 48px}
-  .brand{font-weight:800;font-size:24px}
-  nav{display:flex;flex-wrap:wrap;gap:24px;align-items:center;font-size:15px}
-  nav a:not(.btn){color:var(--muted);transition:color .15s ease}
+  /* Header */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line)}
+  header .bar{display:flex;justify-content:space-between;align-items:center;height:84px}
+  .brand{font-weight:800;font-size:clamp(20px,2.5vw,24px);letter-spacing:-0.02em}
+  .brand .accent{font-style:italic;transform:scaleY(1.6);transform-origin:center center;display:inline-block;line-height:0;vertical-align:middle}
+  nav{display:flex;align-items:center;gap:clamp(24px,3vw,40px)}
+  nav a:not(.btn){font-size:clamp(13px,1.5vw,15px);font-weight:500;color:var(--muted);transition:color .15s ease}
   nav a:not(.btn):hover{color:var(--ink)}
-  #menu-toggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);font:inherit;padding:10px 16px;border-radius:999px;cursor:pointer}
+  #menu-toggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);font:inherit;padding:10px 12px;border-radius:10px;cursor:pointer}
+  #menu-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-  .hero{padding:96px 48px 112px;max-width:1100px}
-  .hero h1{font-weight:800;font-size:clamp(52px,7.5vw,96px);line-height:.98;margin:24px 0 32px}
-  .hero p{font-size:22px;line-height:1.5;max-width:640px;margin:0 0 40px;color:var(--muted)}
-  .hero-cta{display:flex;flex-wrap:wrap;gap:16px}
-  .hero-cta .btn{padding:18px 32px;font-size:17px}
+  /* Hero */
+  .hero{position:relative;padding:clamp(140px,18vw,200px) 0 clamp(80px,10vw,120px);min-height:100vh;display:grid;grid-template-columns:1fr 1fr;gap:clamp(40px,6vw,80px);align-items:center}
+  .hero-content{max-width:650px}
+  .hero h1{font-weight:800;font-size:clamp(42px,6vw,68px);line-height:1.02;letter-spacing:-0.03em;margin-bottom:clamp(20px,3vw,32px)}
+  .hero h1 .accent{color:var(--accent)}
+  .hero .lead{font-size:clamp(15px,1.8vw,17px);line-height:1.7;max-width:450px;margin-bottom:clamp(24px,3vw,32px)}
+  .hero .positioning{display:flex;align-items:flex-start;gap:16px;padding-left:16px;border-left:2px solid var(--accent);margin-top:clamp(24px,3vw,32px)}
+  .hero .positioning p{font-size:clamp(14px,1.6vw,16px);font-weight:500;color:var(--muted);margin:0}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:16px;margin-top:clamp(24px,3vw,32px)}
+  .hero-visual{position:relative;display:flex;justify-content:center;align-items:center}
+  .hero-image{width:100%;max-width:460px;aspect-ratio:3/4;object-fit:cover;border-radius:8px}
+  .hero-floating{position:absolute}
+  .brand-tile{top:clamp(-20px,-3vw,-40px);right:clamp(-20px,-3vw,-40px);width:clamp(80px,10vw,120px);height:clamp(80px,10vw,120px);background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 40px rgba(255,87,40,0.3)}
+  .brand-tile svg{width:60%;height:60%}
+  .message-card{bottom:clamp(-20px,-3vw,-40px);left:clamp(-20px,-3vw,-40px);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:clamp(16px,2vw,24px);max-width:clamp(160px,20vw,220px);box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+  .message-card p{font-size:clamp(12px,1.4vw,14px);font-weight:700;line-height:1.3;color:var(--ink);margin:0 0 12px}
+  .message-card .arrow-btn{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s ease,background .15s ease}
+  .message-card .arrow-btn:hover{transform:rotate(15deg);background:var(--accent-hover)}
+  .message-card .arrow-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .phone-mockup{bottom:clamp(-40px,-5vw,-60px);right:clamp(-40px,-5vw,-60px);width:clamp(140px,18vw,200px);background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:12px 8px 20px;box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+  .phone-mockup .notch{width:80px;height:6px;background:var(--dim);border-radius:3px;margin:0 auto 12px}
+  .phone-mockup .screen{background:var(--bg);border-radius:12px;overflow:hidden;aspect-ratio:9/19}
+  .phone-mockup .screen-content{padding:16px;display:flex;flex-direction:column;gap:12px;height:100%}
+  .phone-mockup .screen-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim)}
+  .phone-mockup .screen-title{font-weight:700;color:var(--ink)}
+  .phone-mockup .product-img{width:100%;aspect-ratio:1/1;background:var(--card);border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .phone-mockup .product-img svg{width:50%;height:50%;color:var(--accent)}
+  .phone-mockup .product-info{display:flex;flex-direction:column;gap:4px}
+  .phone-mockup .product-name{font-size:13px;font-weight:700;color:var(--ink)}
+  .phone-mockup .product-price{font-size:12px;color:var(--accent);font-weight:600}
+  .phone-mockup .btn-small{margin-top:auto;padding:10px;border-radius:8px;font-size:11px;font-weight:700;background:var(--accent);color:var(--bg);text-align:center}
+  .decor-lines{position:absolute;inset:0;pointer-events:none;overflow:visible}
+  .decor-lines svg{width:100%;height:100%}
 
-  .services{background:var(--bg-alt)}
-  .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
-  .service{border-top:3px solid var(--accent);padding:24px 0}
-  .service .num{color:var(--accent);font-weight:700}
-  .service h3{font-size:28px;margin:8px 0}
-  .service p{color:var(--muted);line-height:1.55;margin:0}
+  /* Why Choose Us */
+  .why-choose{padding-top:clamp(64px,8vw,96px);padding-bottom:clamp(64px,8vw,96px)}
+  .why-choose .section-divider{margin-bottom:clamp(48px,6vw,64px)}
+  .why-grid{display:grid;grid-template-columns:1fr repeat(4,1fr);gap:clamp(24px,3vw,40px);align-items:start}
+  .why-intro{max-width:300px}
+  .why-intro .eyebrow{margin-bottom:12px}
+  .why-intro h2{font-size:clamp(28px,3.5vw,40px);line-height:1.15;margin-bottom:0}
+  .value-prop{padding-left:clamp(16px,2vw,24px);border-left:1px solid var(--line)}
+  .value-prop:first-of-type{border-left:none;padding-left:0}
+  .value-icon{width:clamp(24px,3vw,30px);height:clamp(24px,3vw,30px);color:var(--accent);margin-bottom:16px;flex-shrink:0}
+  .value-prop h3{margin-bottom:8px}
+  .value-prop p{font-size:clamp(13px,1.5vw,15px);margin:0}
 
-  .packages-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
-  .package h3{font-size:26px;margin:0 0 8px}
-  .package.featured{border-color:var(--accent)}
-  .package .per{font-size:.55em;font-weight:700;color:var(--muted)}
+  /* Services */
+  .services{padding-top:clamp(64px,8vw,96px);padding-bottom:clamp(64px,8vw,96px)}
+  .services .section-divider{margin-bottom:clamp(48px,6vw,64px)}
+  .services-layout{display:grid;grid-template-columns:1fr 1.8fr;gap:clamp(40px,6vw,80px);align-items:start}
+  .services-intro{max-width:420px}
+  .services-intro .eyebrow{margin-bottom:12px}
+  .services-intro h2{margin-bottom:clamp(16px,2vw,24px)}
+  .services-intro .lead{margin-bottom:clamp(24px,3vw,32px)}
+  .services-link{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:clamp(13px,1.5vw,15px);color:var(--accent);transition:gap .15s ease}
+  .services-link:hover{gap:12px}
+  .services-link svg{flex-shrink:0}
+  .services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,2.5vw,32px)}
+  .service-card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;transition:border-color .2s ease,transform .2s ease}
+  .service-card:hover{border-color:var(--accent);transform:translateY(-4px)}
+  .service-card:focus-within{border-color:var(--accent);outline:none}
+  .service-image{width:100%;aspect-ratio:4/3;object-fit:cover}
+  .service-content{padding:clamp(18px,2vw,22px)}
+  .service-icon{width:clamp(20px,2.5vw,24px);height:clamp(20px,2.5vw,24px);color:var(--accent);margin-bottom:12px;flex-shrink:0}
+  .service-label{font-size:clamp(10px,1.2vw,12px);letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px;display:block}
+  .service-card h3{margin-bottom:12px}
+  .service-card p{font-size:clamp(13px,1.5vw,15px);margin-bottom:16px}
+  .service-link{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:clamp(12px,1.4vw,14px);color:var(--accent);transition:gap .15s ease}
+  .service-link:hover{gap:10px}
+  .service-link svg{flex-shrink:0}
 
-  .process{background:var(--bg-alt)}
-  .process-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px}
-  .step .n{font-family:'Bricolage Grotesque',sans-serif;font-size:56px;font-weight:800;color:var(--accent)}
-  .step h3{margin:0 0 8px;font-size:22px}
-  .step p{color:var(--muted);line-height:1.5;margin:0}
+  /* Final CTA */
+  .final-cta{padding-top:clamp(64px,8vw,96px);padding-bottom:clamp(64px,8vw,96px)}
+  .final-cta .section-divider{margin-bottom:clamp(48px,6vw,64px)}
+  .cta-container{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:clamp(24px,3vw,40px) clamp(24px,3vw,40px) 8px 8px;padding:clamp(48px,6vw,72px);display:grid;grid-template-columns:1fr auto;gap:clamp(32px,4vw,64px);align-items:center;position:relative;overflow:hidden}
+  .cta-container::before{content:"";position:absolute;top:-3px;right:-1px;width:clamp(200px,30vw,400px);height:clamp(200px,30vw,400px);background:radial-gradient(circle at top right,rgba(255,87,40,0.15),transparent 70%);border-radius:50%;pointer-events:none}
+  .cta-content .eyebrow{margin-bottom:12px}
+  .cta-content h2{font-size:clamp(32px,4.5vw,48px);line-height:1.1;margin-bottom:0}
+  .cta-btn{flex-shrink:0;white-space:nowrap}
 
-  .work-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}
-  .work-item{min-height:300px;border-radius:20px;background:var(--card);padding:32px;display:flex;flex-direction:column;justify-content:flex-end;transition:transform .2s ease;position:relative;overflow:hidden}
-  .work-item:hover{transform:translateY(-4px)}
-  .work-item .work-tag{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
-  .work-item h3{font-size:22px;margin-bottom:4px}
-  .work-item p{color:var(--muted);font-size:14px;margin:0}
+  /* Footer */
+  footer{padding:clamp(48px,6vw,64px) 0;border-top:1px solid var(--line)}
+  .footer-grid{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:clamp(32px,4vw,64px)}
+  .footer-brand{max-width:300px}
+  .footer-brand .brand{margin-bottom:16px;display:inline-block}
+  .footer-brand p{font-size:clamp(13px,1.5vw,15px);color:var(--dim);margin:0}
+  .footer-nav h4{font-size:clamp(12px,1.4vw,14px);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);margin-bottom:16px}
+  .footer-nav ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+  .footer-nav a{font-size:clamp(13px,1.5vw,15px);color:var(--muted);transition:color .15s ease}
+  .footer-nav a:hover{color:var(--accent)}
+  .footer-bottom{margin-top:clamp(48px,6vw,64px);padding-top:clamp(24px,3vw,32px);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;font-size:clamp(12px,1.4vw,14px);color:var(--dim)}
+  .footer-bottom a{color:var(--dim);transition:color .15s ease}
+  .footer-bottom a:hover{color:var(--accent)}
+  .social-links{display:flex;gap:16px}
+  .social-links a{width:40px;height:40px;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:color .15s ease,border-color .15s ease,background .15s ease}
+  .social-links a:hover{color:var(--accent);border-color:var(--accent);background:rgba(255,87,40,0.1)}
+  .social-links a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .social-links svg{width:20px;height:20px}
 
-  .testimonials{background:var(--bg-alt)}
-  .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
-  .testimonial{border:1px solid var(--line);border-radius:20px;padding:32px}
-  .testimonial blockquote{color:var(--muted);font-size:16px;line-height:1.6;margin:0 0 20px;font-style:italic}
-  .testimonial .author{font-weight:700;font-size:15px}
-  .testimonial .role{color:var(--dim);font-size:13px}
-  .stars{color:var(--accent);font-size:18px;margin-bottom:12px;letter-spacing:2px}
-
-  .contact{margin:0 48px 96px;padding:72px 48px;background:var(--accent);color:var(--bg);border-radius:28px}
-  .contact h2{font-weight:800;font-size:clamp(38px,4.5vw,56px);line-height:1.05;margin:0 0 20px;max-width:720px;color:var(--bg)}
-  .contact p{font-size:20px;margin:0 0 32px;max-width:560px;color:var(--bg)}
-  .contact .cta{display:flex;flex-wrap:wrap;gap:16px}
-  .contact .btn{padding:18px 32px}
-
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;padding:64px 48px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .stat .number{font-family:'Bricolage Grotesque',sans-serif;font-size:48px;font-weight:800;color:var(--accent)}
-  .stat .label{color:var(--muted);font-size:15px;margin-top:4px}
-
-  footer{padding:32px 48px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--dim);font-size:14px}
-  footer a{color:var(--dim);transition:color .15s}
-  footer a:hover{color:var(--ink)}
+  /* Mobile Navigation */
+  @media (max-width:900px){
+    .hero{grid-template-columns:1fr;text-align:center;padding-top:clamp(120px,16vw,160px)}
+    .hero-content{max-width:none}
+    .hero .lead{max-width:none}
+    .hero .positioning{justify-content:center}
+    .hero-cta{justify-content:center}
+    .hero-visual{order:-1;max-width:380px;margin:0 auto}
+    .brand-tile{top:-20px;right:-20px}
+    .message-card{bottom:-20px;left:auto;right:-20px}
+    .phone-mockup{bottom:-40px;right:-40px}
+    .why-grid{grid-template-columns:1fr 1fr;gap:clamp(20px,3vw,32px)}
+    .why-intro{grid-column:span 2;max-width:none}
+    .value-prop{border-left:none;padding-left:0;border-top:1px solid var(--line);padding-top:24px}
+    .value-prop:first-of-type{border-top:none;padding-top:0}
+    .services-layout{grid-template-columns:1fr;gap:clamp(32px,4vw,48px)}
+    .services-intro{max-width:none;text-align:center}
+    .services-link{justify-content:center}
+    .services-grid{grid-template-columns:1fr 1fr}
+    .cta-container{grid-template-columns:1fr;text-align:center}
+    .cta-btn{width:100%}
+    .footer-grid{grid-template-columns:1fr 1fr;gap:clamp(32px,4vw,48px)}
+    .footer-brand{grid-column:span 2}
+  }
 
   @media (max-width:760px){
-    section{padding:72px 24px}
-    header .bar{padding:20px 24px}
-    .hero{padding:72px 24px}
-    #menu-toggle{display:inline-block}
-    nav{display:none;position:absolute;right:16px;left:16px;top:76px;background:var(--bg-alt);border:1px solid var(--line);border-radius:16px;padding:20px;flex-direction:column;align-items:flex-start;z-index:50}
+    header .bar{height:72px}
+    #menu-toggle{display:flex;align-items:center;justify-content:center}
+    nav{position:fixed;top:72px;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--line);flex-direction:column;padding:clamp(20px,3vw,24px);gap:16px;display:none;box-shadow:0 20px 40px rgba(0,0,0,0.5)}
     nav.open{display:flex}
-    header{position:relative}
-    .contact{margin:0 24px 72px;padding:48px 28px}
-    footer{padding:28px 24px}
-    .stats{padding:48px 24px}
+    nav a:not(.btn){width:100%;text-align:center;padding:12px 0}
+    nav .btn{width:100%;justify-content:center}
+    .hero{min-height:auto}
+    .services-grid{grid-template-columns:1fr}
+    .footer-grid{grid-template-columns:1fr;gap:clamp(32px,4vw,40px)}
+    .footer-brand{grid-column:auto}
+    .footer-bottom{flex-direction:column;text-align:center}
+    .footer-bottom .social-links{order:-1}
+  }
+
+  @media (max-width:480px){
+    .why-grid{grid-template-columns:1fr}
+    .value-prop{border-top:1px solid var(--line);padding-top:24px}
+    .value-prop:first-of-type{border-top:none;padding-top:0}
+    .cta-container{padding:clamp(32px,5vw,48px);border-radius:16px}
+    .cta-container::before{display:none}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
+
+  <!-- Header -->
+  <header role="banner">
+    <div class="wrap bar">
+      <a href="/" class="brand" aria-label="Cre8ive District home">Cre<span class="accent">8</span>ive District</a>
+      <button id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <nav id="site-nav" role="navigation" aria-label="Main navigation">
+        <a href="#services">Services</a>
+        <a href="#packages">Packages</a>
+        <a href="/about">About</a>
+        <a href="/contact" class="btn btn-primary">Start a project</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-content">
+        <span class="eyebrow">BRANDING · DIGITAL DEVELOPMENT · ADVERTISING</span>
+        <h1 id="hero-heading">Build a brand people trust.<br>Create experiences that convert.<br>Grow with <span class="accent">purpose.</span></h1>
+        <p class="lead">We help ambitious businesses stand out, connect with the right customers, and turn their potential into growth through strategic branding, high-performing digital experiences, and targeted advertising.</p>
+        <div class="positioning" aria-label="Our promise">
+          <p>One creative partner. Everything working toward your next stage of growth.</p>
+        </div>
+        <div class="hero-cta">
+          <a href="/contact" class="btn btn-primary">Get a free consultation<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+          <a href="#packages" class="btn btn-secondary">See packages</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <!-- Hero Image - Using a placeholder that can be replaced with actual portfolio image -->
+        <img class="hero-image" src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=920&h=1227&fit=crop&crop=faces" alt="Creative professional in modern workspace" loading="eager" fetchpriority="high">
+        <!-- Floating Brand Tile -->
+        <div class="hero-floating brand-tile" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="18" fill="#0A0A0A">8</text></svg>
+        </div>
+        <!-- Floating Message Card -->
+        <div class="hero-floating message-card" aria-hidden="true">
+          <p>Better<br>Brands.<br>Bigger<br>Opportunities.</p>
+          <button class="arrow-btn" aria-label="Learn more about our approach"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+        </div>
+        <!-- Phone Mockup -->
+        <div class="hero-floating phone-mockup" aria-hidden="true">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="screen-content">
+              <div class="screen-header"><span>Cre8ive District</span><span>₦</span></div>
+              <div class="product-img"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="32" height="32" rx="6" stroke="currentColor" stroke-width="2"/><path d="M16 24L22 30L32 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="product-info">
+                <span class="product-name">Brand Identity Kit</span>
+                <span class="product-price">₦150,000</span>
+              </div>
+              <button class="btn-small">Add to project</button>
+            </div>
+          </div>
+        </div>
+        <!-- Decorative Lines -->
+        <div class="decor-lines" aria-hidden="true">
+          <svg viewBox="0 0 460 580" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 500 Q150 400 200 300 Q250 200 350 150" stroke="#FF5728" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+            <path d="M410 80 Q350 150 300 250 Q250 350 150 450" stroke="#FF5728" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+            <circle cx="80" cy="480" r="3" fill="#FF5728" opacity="0.5"/>
+            <circle cx="380" cy="100" r="2" fill="#FF5728" opacity="0.5"/>
+            <circle cx="120" cy="120" r="1.5" fill="#FF5728" opacity="0.4"/>
+            <circle cx="340" cy="460" r="1.5" fill="#FF5728" opacity="0.3"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why Choose Us Section -->
+    <section class="why-choose" aria-labelledby="why-heading">
+      <div class="section-divider" aria-hidden="true"></div>
+      <div class="why-grid">
+        <div class="why-intro">
+          <span class="eyebrow">WHY CHOOSE US</span>
+          <h2 id="why-heading">More than<br>just services.</h2>
+        </div>
+        <div class="value-prop">
+          <svg class="value-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <h3>Strategic Thinking</h3>
+          <p>We don't just make things look good — we build strategies that work.</p>
+        </div>
+        <div class="value-prop">
+          <svg class="value-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <h3>End-to-End Support</h3>
+          <p>From concept to launch, we're with you at every step.</p>
+        </div>
+        <div class="value-prop">
+          <svg class="value-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          <h3>Results Focused</h3>
+          <p>Our work is designed to help you attract, engage, and grow.</p>
+        </div>
+        <div class="value-prop">
+          <svg class="value-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <h3>A Team You Can Trust</h3>
+          <p>Creative minds, technical experts, real partners.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="services" aria-labelledby="services-heading">
+      <div class="section-divider" aria-hidden="true"></div>
+      <div class="services-layout">
+        <div class="services-intro">
+          <span class="eyebrow">OUR SERVICES</span>
+          <h2 id="services-heading">Everything your business needs to stand out and win more customers.</h2>
+          <p class="lead">We combine creativity, technology, and strategy to help your business look better, work smarter, and reach the right people.</p>
+          <a href="/services" class="services-link">Explore all services<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+        </div>
+        <div class="services-grid">
+          <!-- Service Card 1: Branding -->
+          <article class="service-card">
+            <img class="service-image" src="https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop" alt="Brand identity materials including business cards, letterhead, and packaging" loading="lazy">
+            <div class="service-content">
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+              <span class="service-label">BRANDING</span>
+              <h3>Build a strong, memorable brand</h3>
+              <p>Logo design, visual identity systems, brand guidelines, and collateral that earn trust and set you apart.</p>
+              <a href="/services#branding" class="service-link">Learn more<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+            </div>
+          </article>
+          <!-- Service Card 2: Digital Development -->
+          <article class="service-card">
+            <img class="service-image" src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop" alt="Modern website interface on laptop screen" loading="lazy">
+            <div class="service-content">
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <span class="service-label">DIGITAL DEVELOPMENT</span>
+              <h3>Create fast, modern digital products</h3>
+              <p>Responsive websites, web applications, mobile apps, and e-commerce built for performance and conversion.</p>
+              <a href="/services#development" class="service-link">Learn more<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+            </div>
+          </article>
+          <!-- Service Card 3: Advertising -->
+          <article class="service-card">
+            <img class="service-image" src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop" alt="Mobile phone showing social media advertising campaign" loading="lazy">
+            <div class="service-content">
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.26 10.123a11.045 11.045 0 0 0 3.75 10.575c.594.593 1.55.593 2.142 0l.002-.002a11.006 11.006 0 0 0 7.41-3.578"></path><path d="M13.89 6.75a11.026 11.026 0 0 1 1.26-6.63"></path><path d="M17.42 4.28a11.055 11.055 0 0 1 10.577 3.75c.594.594.594 1.55 0 2.143l-.003.003a11.02 11.02 0 0 1-3.578 7.41"></path><path d="M6.56 17.42a11.052 11.052 0 0 1-3.58-7.41"></path></svg>
+              <span class="service-label">ADVERTISING</span>
+              <h3>Reach the right people</h3>
+              <p>Targeted campaigns across Meta, TikTok, Google, and X that drive real business results.</p>
+              <a href="/services#advertising" class="service-link">Learn more<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta" aria-labelledby="cta-heading">
+      <div class="section-divider" aria-hidden="true"></div>
+      <div class="cta-container">
+        <div class="cta-content">
+          <span class="eyebrow">LET'S BUILD SOMETHING GREAT</span>
+          <h2 id="cta-heading">Your next chapter<br>starts with a conversation.</h2>
+        </div>
+        <a href="/contact" class="btn btn-primary cta-btn">Start a project<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer role="contentinfo">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="brand" aria-label="Cre8ive District home">Cre<span class="accent">8</span>ive District</a>
+        <p>We build brands people trust, create digital experiences that convert, and run advertising that grows businesses. A Graceman IT Concepts company.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Quick links">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/about">About us</a></li>
+          <li><a href="/services">Services</a></li>
+          <li><a href="#packages">Packages</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-nav" aria-label="Services">
+        <h4>Services</h4>
+        <ul>
+          <li><a href="/services#branding">Branding</a></li>
+          <li><a href="/services#development">Digital Development</a></li>
+          <li><a href="/services#advertising">Advertising</a></li>
+          <li><a href="/services#print">Print & Production</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-nav" aria-label="Connect">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="https://wa.me/2349038753287">WhatsApp</a></li>
+          <li><a href="mailto:hello@cre8ivedistrict.com">Email</a></li>
+          <li><a href="https://instagram.com/cre8ivedistrict" target="_blank" rel="noopener">Instagram</a></li>
+          <li><a href="https://linkedin.com/company/cre8ivedistrict" target="_blank" rel="noopener">LinkedIn</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <div class="social-links" aria-label="Social media">
+        <a href="https://instagram.com/cre8ivedistrict" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+        <a href="https://linkedin.com/company/cre8ivedistrict" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg></a>
+        <a href="https://twitter.com/cre8ivedistrict" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a>
+      </div>
+      <p>&copy; 2026 Cre8ive District. All rights reserved.</p>
+      <p>Lagos, Nigeria &middot; +234 903 875 3287</p>
+    </div>
+  </footer>
+
+</div>
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('site-nav');
+  toggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    toggle.innerHTML = open 
+      ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+      : '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+  });
+  nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+  }));
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
 
   <header>
     <div class="bar">
@@ -133,9 +463,10 @@
   </header>
 
   <div class="hero">
-    <div class="eyebrow">Branding &middot; Development &middot; Ads</div>
-    <h1>Build it. Brand it.<br>Promote it.</h1>
-    <p>From logo to landing page to launch campaign — Cre8ive District is the one-stop creative agency that designs your brand, builds your digital products, and runs the ads that bring customers in. One team, start to finish.</p>
+    <div class="eyebrow">BRANDING · DIGITAL DEVELOPMENT · ADVERTISING</div>
+    <h1>Build a brand people trust. Create experiences that convert.<br>Grow with purpose.</h1>
+    <p>We help ambitious businesses stand out, connect with the right customers, and turn their potential into growth through strategic branding, high-performing digital experiences, and targeted advertising.</p>
+    <p style="margin-top:16px;font-weight:500;color:var(--muted)">One creative partner. Everything working toward your next stage of growth.</p>
     <div class="hero-cta">
       <a href="/contact" class="btn btn-accent">Get a free consultation</a>
       <a href="#packages" class="btn btn-outline">See packages</a>
@@ -300,7 +631,7 @@
     <h2>Ready to build something?</h2>
     <p>Tell us what you're working on — a brand, a website, an ad campaign, or all three. We'll reply with next steps and a quote within 24 hours.</p>
     <div class="cta">
-      <a href="https://wa.me/2348000000000" class="btn btn-dark">Chat on WhatsApp</a>
+      <a href="https://wa.me/2349038753287" class="btn btn-dark">Chat on WhatsApp</a>
       <a href="mailto:hello@cre8ivedistrict.com" class="btn btn-outline-dark">hello@cre8ivedistrict.com</a>
     </div>
   </div>
@@ -312,7 +643,7 @@
       <a href="/about">About</a> &middot;
       <a href="/contact">Contact</a>
     </div>
-    <div>Lagos, Nigeria &middot; +234 800 000 0000</div>
+    <div>Lagos, Nigeria &middot; +234 903 875 3287</div>
   </footer>
 
 </div>
