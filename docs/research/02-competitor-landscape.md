@@ -172,3 +172,73 @@ All primary pages below were reviewed 29 October 2026. These are direct studio s
 - [Theepa Studio pricing](https://theepa.studio/pricing/)
 - [Squero](https://www.squero.com/)
 - [The Brand Studio](https://jasonalan.com/brand-studio)
+
+## Deep review of four closest launch peers — 29 October 2026
+
+This deeper pass prioritizes creative.ng, Bantu & Co., Visiominds, and 9—41 Studio rather than expanding the number of names. Observations below come from publicly accessible websites and profiles. They still do not establish client satisfaction, actual close rates, independently verified outcomes, or buyer preferences.
+
+### 1. creative.ng — Abuja-based, remote studio
+
+**What it sells:** A strategy/content-led service menu spanning brand strategy, social media management, content strategy and production, paid advertising, launch strategy, identity, creative direction, content banks, community management, and marketing consulting. The homepage leads with the problem of posting and advertising without reaching the right people, then offers a free strategy call and “receipts.”
+
+**Public price signal:** Brand Foundation begins at **₦500,000** for audit, competitor/audience research, positioning, messaging/voice, journey and offer positioning, content strategy/pillars, and a 90-day roadmap; the page estimates 2–3 weeks. A Strategy Intensive begins at **₦350,000** for a focused strategy session and document. A Brand Launch Experience begins at **₦1,500,000** and adds creative direction, website, launch planning, social/email setup, and launch assets. Prices are the studio's published starting prices, not verified transaction prices or market averages. [Pricing page](https://creativehq.ng/pricing).
+
+**Proof and acquisition mechanics:** Publishes a wall of work, video/reel library, strategy decks/calendars, dashboard screenshots labeled as shared with permission, client testimonials, and a WhatsApp-delivered Brand Clarity Checklist. The site states response within two working days, usually one, and offers both a free call and a form. Social profile links identify Instagram and TikTok as `@_creative.ng`; LinkedIn and Behance are also linked. These are strong trust and conversion mechanics because they show both visible creative output and behind-the-scenes thinking. Dashboard metrics remain self-reported, and testimonials use limited client attribution on the homepage.
+
+**Positioning and implications:** Its center of gravity is ongoing content/marketing execution and visibility rather than a narrow identity studio. Cre8ive should not compete by promising an equally broad always-on content/ads operation before it has staffing and reporting capacity. A better launch wedge is a clearly bounded brand strategy + identity foundation, with a practical visibility starter and website as explicit next scopes.
+
+### 2. Bantu & Co. — Lagos brand/design studio
+
+**What it sells:** Seven connected disciplines: brand strategy; identity/design systems; product/digital; campaigns/social; film/motion; merch/objects; editorial/reports. Its point of view ties design to people, place, and local context. Selected public cases show applications such as a remittance brand/rebrand, app and website work, campaigns, and editorial.
+
+**Delivery detail:** Bantu publishes an unusually concrete five-movement process: Listen (10–15%); Locate/position (15–20%); Sketch three directions (20–25%); Build a full system (40–45%); Hand off (5–10%). The site describes a signed-off discovery document, one-page positioning decision, three creative routes at 70%, two internal critiques, master files/guidelines/applications, training, 30 days of launch support, and an intended case study within 60 days. It publicly states no price, so price comparison is not possible from the site.
+
+**Positioning and implications:** The market-context lens and disciplined handoff are already occupied territories; “Nigeria-rooted” by itself is not a gap. Cre8ive can learn from explicit gates and practical handoff, then build its own distinct method around the founders it serves and the digital/visibility work it can truly deliver. The public-site extractor did not expose all rendered page content in this review, so claims about its Instagram cadence or recent post engagement are not made. [Bantu & Co.](https://bantuandco.net/).
+
+### 3. Visiominds — Lagos brand and digital studio
+
+**What it sells:** Brand identity, strategy, web design/build (including Webflow and custom code), 3D/visualisation, illustration, and fashion/product work. It frames itself around founders and growing companies whose positioning problem should be solved before design. It publishes named work with one-sentence context, dates, and selectable disciplines.
+
+**Public price signal:** Visio Lens starts at **US$3,000** for one major piece of work; Visio Sprint is **US$10,000** for a four-week positioning, messaging, identity, guidelines, and landing-page scope; Visio Rebuild starts at **US$25,000** for a three-to-four-month strategy, identity, website, and launch-video engagement; Visio Partner is **US$3,500/month**. A free 60-minute audit reviews identity, website, pitch materials, and social profiles and provides prioritized action items. The site says project payments are 40/30/30, states USD pricing, and describes international work across West Africa, Europe, and the US. These are self-published terms, not evidence that every engagement closes at the listed amount. [Plans](https://visio-minds.com/plans.html), [FAQ](https://visio-minds.com/faq.html).
+
+**Delivery detail:** Its studio page describes a three-to-five-person project team (creative director, design lead, strategy lead, engineering lead) and four stages: discovery, strategy, design, launch/handoff. It publishes claims of five years, 13 partners, 29+ projects, and 100% satisfaction; treat the metrics as self-reported. [Studio](https://visio-minds.com/studio.html).
+
+**Positioning and implications:** This is the strongest public example in the sample of transparent international pricing, offer segmentation, no-pressure audit, and an explicit remote/time-zone model. It appears positioned at a premium international budget; it is a process and offer-design reference, not a price target for Cre8ive. Its free audit is valuable but can consume senior time; Cre8ive should use a 15–20-minute fit call or a tightly bounded paid diagnostic rather than copying a 60-minute unpaid service before measuring conversion.
+
+### 4. 9—41 Studio — Nigeria-based, serving global clients
+
+**What it sells:** Brand identity and websites as its core, with motion design and a broader team capability in UI/UX, development, and project management. Its central message is that brands should be memorable, and it displays web and brand work such as Saya, Rhyno, Artshouldhurt, and About:Blank.
+
+**Public price and process:** Website builds start at **US$4,000** for up to 10 pages and take 1–2 weeks; Brand + Website starts at **US$8,000** and takes 3–4 weeks; Studio Partner starts at **US$15,000**. The public process says 30-minute call, 50% upfront, work starts within a week, then balance on delivery; fixed scope, date, two rounds of changes, and written handover are emphasized. [Pricing](https://www.941studio.com/pricing).
+
+**Proof and acquisition mechanics:** Its About page says the studio's first client discovered its work on Behance before the public launch and that many clients follow that pattern. Behance currently exposes roughly 73.9k project views, 5.0k appreciations, and 577 followers for the studio profile; selected projects show project-level views/appreciations (e.g. Saya at about 31k views/1.8k appreciations). These counters are platform-reported and can change; they are evidence of portfolio-platform distribution, not proof of leads or sales. [About](https://www.941studio.com/about), [Behance profile](https://www.behance.net/941studio).
+
+**Positioning and implications:** This is a strong example of design-led inbound distribution plus a direct, fixed-price sales path. Cre8ive should publish a few deep case studies on its own website and mirror selected projects on portfolio platforms where its ideal buyers browse. Behance needs complete, high-craft projects; merely maintaining a profile will not reproduce the studio's reported inbound.
+
+## Cross-competitor decisions for Cre8ive District
+
+### What to copy as a practice (not as brand language)
+
+- From creative.ng: show underlying strategy documents and permissioned channel evidence; provide a useful lead magnet only if the studio can actually maintain/follow up on it.
+- From Bantu: make decision gates, strategy-before-design, feedback rounds, and handoff concrete.
+- From Visiominds: explain which offer fits which buyer situation; state remote delivery and payment conventions after they are operationally confirmed.
+- From 9—41: make a strong portfolio discoverable on both the studio site and a portfolio platform; specify price/scope/date/payment once delivery data supports them.
+
+### What not to copy
+
+- Do not publish a broad list of paid media, social management, film, animation, app, AI, and hardware as launch capability just because competitors list it.
+- Do not offer a large free audit before calculating staff time, scope limits, and conversion value.
+- Do not claim market-leading performance or guaranteed outcomes based on another agency's dashboard screenshot or testimonials.
+- Do not use global pricing or timeline claims as currency-adjusted evidence for Cre8ive's Nigeria offer.
+
+## Social and search visibility: evidence limits
+
+The studios' public sites link to Instagram/TikTok, but those social destinations returned cache/fetch errors in this research environment on 29 October 2026. Therefore a reliable audit of the last 30 Instagram/TikTok posts, creative quality, post cadence, or engagement rate could not be completed here. Publicly observable alternatives: creative.ng publishes its own social dashboard screenshots with permission statements; 9—41 has current LinkedIn updates visible in the public page excerpt and Behance engagement counters; the other two studios' Instagram feeds were not inspectable in this pass. Do not infer social performance from a linked handle alone.
+
+Likewise, this web research environment does not provide a controlled, location-specific Google SERP with stable positions, personalization, and device/language settings. A set of indexed pages was visible for terms such as “branding agency Lagos” and “brand strategy Lagos,” including The Manifest directories and geo-targeted landing pages, but those observations are **not Google ranking positions**. A proper baseline requires neutral/incognito searches from Nigeria and selected target countries or a rank-tracking/SEO tool with configured locations, followed by Search Console after Cre8ive's own domain is live. Do not claim competitor rank order based on this report.
+
+Public enquiry paths were reviewed without submitting fabricated inquiries. The observed paths include free strategy/audit calls, Calendly, direct email, WhatsApp, and downloadable lead magnets. A mystery shop that submits a real enquiry needs an explicitly authorized, truthful research identity and a rule not to waste competitors' time; it was not performed in this pass.
+
+## Source review date and limitations
+
+The four primary competitor websites and linked public portfolio/profile pages were reviewed on 29 October 2026. Prices, process descriptions, team sizes, claims, and counters are self-reported or platform-reported. No private proposals, actual buyer interviews, customer-side win/loss data, verified delivery-quality audit, or private analytics were available. The five-customer interview guide and recommended launch test appear in the research synthesis; complete customer validation remains outstanding.
