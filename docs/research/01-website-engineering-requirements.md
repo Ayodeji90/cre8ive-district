@@ -283,3 +283,54 @@ Primary references reviewed 29 October 2026:
 - [Google Search Central — Build and submit a sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
 
 **Interpretation note:** The recommendations about choosing a hosted form/CRM, static-first rendering, and delaying a custom backend are engineering inferences from the stated small-team/launch goals and the documented capabilities above. They must be revisited if the founder chooses different business, privacy, or operational constraints.
+
+## 15. Reference study: Adis Design and application to Cre8ive District
+
+**Review date:** 29 October 2026. **Reference:** [adisdesign.com](https://www.adisdesign.com/). This is a public-site content and information-architecture review, not a full browser-based audit. The available page view exposes its navigation, copy, links, and project narratives; it does not provide reliable evidence for visual breakpoints, Core Web Vitals, keyboard behavior, screen-reader output, or live form delivery. Treat those items as unverified rather than as findings.
+
+### What is observable
+
+- The home page combines an introductory studio statement, grouped service categories, a short portfolio selection, founder/team story, and direct contact details. The visible service taxonomy covers branding, digital design, presentations, motion, collateral, and print. [Adis home page](https://www.adisdesign.com/)
+- The top navigation exposes Design Services, Case Studies, About Us, and Contact Us, with named Strivr, ClearStory Data, and Kaiser Permanente project links. The project stories are separate destinations rather than only an undifferentiated gallery. [Adis home page](https://www.adisdesign.com/)
+- Its Strivr story explains project context and scope, then exposes research and process artifacts: information gathering, usability testing, stakeholder interviews, sitemap rebuild, persona collaboration, wireframes, visual iterations, a design review involving product managers and engineering, prototype coverage across product tabs/mobile, and ongoing revision. It describes design decisions and constraints, not only final screens. [Strivr case study](https://www.adisdesign.com/strivr)
+- Its Kaiser Permanente story names the user-interface scope and responsibilities, describes sitemap/task-flow work, clickable wireframes, and three rounds of usability tests with 5–8 participants each; it also says interviews and research informed visual decisions. The page identifies the work date as 2014, which helps readers interpret its age. These are claims in the studio's case narrative, not independently verified research records. [Kaiser Permanente case study](https://www.adisdesign.com/kaiserpermanente)
+- The About section gives a founder name/qualification, a personal experience claim, an explanation of the studio's name, and a short account of how its team works. The page also publishes email and telephone contact. These are trust cues visible in the content; their effect on conversion is not measured here. [Adis home page](https://www.adisdesign.com/)
+- The site identifies Wix-hosted image assets in the rendered page extract. That reveals a platform/content delivery dependency, but does not itself establish performance, accessibility, or engineering quality. No public pricing or enquiry intake workflow was established from the accessible content.
+
+### Principles worth adapting, without copying the visual identity
+
+Keep two kinds of evidence separate. The **homepage** provides the observable information architecture and studio introduction: navigation, service groupings, a three-project selection, founder/team context, and contact details. The crawler's text extraction is sparse and cannot establish whether the visual design is sparse, how sections appear above the fold, or whether the page looks polished. The **case studies** provide the stronger transferable material: how to document research, design decisions, iterations, artifacts, and collaboration. Recommendations below draw mainly on that case-study method, not on an asserted visual audit of Adis's homepage.
+
+| Observed principle | Cre8ive District application | Engineering/content requirement |
+|---|---|---|
+| Connect design to a goal and user need | Make every homepage section answer a prospect question: who is this for, what changes, what is included, why trust the team, and what happens next. | Map each section to a user journey and one primary CTA; remove decorative sections that do not build understanding, proof, or action. |
+| Show reasoning behind finished work | Present 2–3 strong case studies or clearly labelled concepts with context, audience/problem, strategy decision, identity system, applications, and evidenced result. | Create a reusable case-study content schema; support role/permission notes and optional sections so a case remains honest when outcome data are unavailable. |
+| Show process artifacts as proof | Share selected anonymized strategy maps, sketches, systems, or before/after applications when ownership and permissions allow. For a new studio, use original concepts clearly marked as concepts. | Add optimized, responsive media with captions/alt text and rights metadata; avoid publishing confidential client data. |
+| Put a real person and accountable team behind the work | Explain who leads strategy/design/web, what is founder-owned versus partner-delivered, and how Nigeria-based remote delivery works for international clients. | Maintain one reviewed profile/content source; do not promise team size, credentials, time zones, or response targets that are not true. |
+| Organize service breadth into understandable categories | Lead with the approved Brand Foundation and its buyer situation; show website and visibility as separate, clearly scoped next steps. Keep AI/software/hardware out of the launch menu until validated. | Use an offer/service data model with inclusions, exclusions, fit, and CTA; do not publish a broad capability list that implies unstaffed delivery. |
+| Let project proof have a direct route | Use descriptive project cards that link to individual cases; help visitors scan by project type and then inspect detail. | Cards need text labels, semantic links, meaningful image alternatives, stable case URLs, page metadata, and internal links back to enquiry. |
+
+### Proposed Cre8ive District page model
+
+1. **Home:** a clear outcome-led statement for founders and existing businesses in Nigeria and abroad; the Brand Foundation pilot; a compact proof strip; 2–3 featured cases/concepts; a short, numbered process; founder/team ownership; a prominent project enquiry CTA.
+2. **Services:** Brand Foundation as the lead offer with deliverables, boundaries, buyer fit, timeline assumptions, and next step; website and visibility as separately scoped engagements; no speculative future offerings.
+3. **Work:** filter or group by strategy/identity/web only if there is enough real work to make filtering useful. At launch, a simple set of descriptive project cards is preferable to a complex portfolio interface.
+4. **Case study template:** short context → user/business problem → strategic choice → system and applications → process/iterations → outcome with evidence or an explicit no-metric explanation → contributor/permission details → enquiry CTA.
+5. **About/process:** founder and collaborators, real capability boundaries, review/approval steps, remote work method, file handoff, and confirmed contact expectations.
+6. **Contact:** short accessible POST form with truthful success/failure states and a durable lead record, plus direct WhatsApp/email alternatives. The prototype currently opens a prefilled WhatsApp draft; that is a useful alternative route, not proof that the studio received a lead. See WEB-F08–F16 and backend options in Section 5.
+
+### Visual and interaction translation
+
+Use the reference for the **content logic** of studio statement → service map → selected proof → human/team context → contact. Do not reproduce Adis's layout, graphics, case-study wording, image assets, typography, or brand name. Cre8ive should use its own approved identity and a distinctive visual system grounded in its work.
+
+At desktop widths, give case-study imagery enough scale to demonstrate craft while keeping explanatory text legible alongside it. On narrow screens, stack text and media in reading order, preserve project labels and CTA visibility, use responsive image sources and fixed aspect-ratio placeholders, and avoid horizontal carousels as the only way to reach work. These are implementation recommendations; Adis's responsive behavior was not measured. All controls need keyboard focus and visible labels; motion must respect reduced-motion settings. Do not infer accessibility from the site's crawl notice that mentions tab navigation.
+
+### Engineering priorities derived from this reference
+
+- **P0 before launch:** settle the V1 offer and work permissions; build canonical Home/Services/Work/Case Study/About/Contact routes; use pre-rendered HTML and a small reusable component system; optimize portfolio imagery; implement accessible navigation and a real form-to-hosted-CRM or serverless-to-CRM intake; publish accurate metadata and canonical URLs.
+- **P1 after proof grows:** add a CMS or structured editorial workflow when the founder needs routine case updates without engineering help; add work filters only when portfolio volume supports them; add aggregate source attribution and Search Console after privacy/vendor review.
+- **Later only with evidence:** client portals, custom dashboards, bespoke databases, AI-assisted tools, app/software/hardware features. Adis's product case studies demonstrate the value of communicating design process; they do not justify building a product backend for Cre8ive District's marketing site.
+
+### Limits of the comparison
+
+Adis presents a broad service range and product-design cases, while Cre8ive District's launch focus is a narrow strategy-led brand offer and credible digital presence. The transferable lesson is how to explain intent and show process, not to match its service menu. This review did not inspect private analytics, test a live enquiry, contact the studio, verify project claims, or run external audits of performance/accessibility/SEO. Public claims and portfolio narratives remain self-presented; this document does not independently verify the outcomes.

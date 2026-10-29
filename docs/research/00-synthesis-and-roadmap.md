@@ -25,6 +25,10 @@ This combines broad reach with narrow first-market testing. “Any brand” desc
 
 These are clear working recommendations, not market facts. Use them as the first version to react to and validate; revise them when founder capability data and customer interviews arrive.
 
+### Website reference: Adis Design
+
+The [Adis Design site](https://www.adisdesign.com/) is a useful reference for connecting studio positioning, grouped services, selected project work, founder/team context, and project-level case studies. Its Strivr and Kaiser Permanente pages explain research, information architecture, iteration, and artifacts behind the finished work. Adapt that **proof structure** for Cre8ive: show the client/business problem, the strategic choice, the resulting identity and applications, and only outcomes the studio can evidence. Keep Cre8ive's launch offer narrower than Adis's broad service catalogue, use Cre8ive's own visual identity, and route enquiries through a durable form/CRM intake with WhatsApp/email as alternatives. The engineering report adds the page model, components, responsive requirements, and limits of this public-site review.
+
 ### First buyer wedge: two situations, Nigeria-first delivery
 
 For the first 30–60 days, prioritize:
