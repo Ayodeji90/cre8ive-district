@@ -49,6 +49,56 @@
     revealItems.forEach(item => item.classList.add('is-visible'));
   }
 
+  // Fog cloud animation
+  const fogCanvas = document.getElementById('fog');
+  if (fogCanvas && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const fCtx = fogCanvas.getContext('2d');
+    let fw, fh;
+    const fogResize = () => { fw = fogCanvas.width = window.innerWidth; fh = fogCanvas.height = window.innerHeight; };
+    fogResize();
+    window.addEventListener('resize', fogResize, { passive: true });
+
+    const palette = [[243,107,53],[180,170,155],[80,75,65],[220,210,195],[243,107,53]];
+    const blobs = Array.from({ length: 18 }, () => {
+      const depth = Math.random();
+      const [r,g,b] = palette[Math.floor(Math.random() * palette.length)];
+      return {
+        x: Math.random() * fw * 1.4 - fw * 0.2,
+        y: Math.random() * fh,
+        r: 180 + depth * 350,
+        vx: 0.1 + depth * 0.3,
+        vy: (Math.random() - 0.5) * 0.06,
+        wobble: Math.random() * Math.PI * 2,
+        wAmp: 0.15 + Math.random() * 0.4,
+        wFreq: 0.001 + Math.random() * 0.002,
+        opacity: 0.025 + depth * 0.05,
+        cr: r, cg: g, cb: b
+      };
+    });
+
+    const drawFog = () => {
+      fCtx.clearRect(0, 0, fw, fh);
+      for (const b of blobs) {
+        b.wobble += b.wFreq;
+        b.x += b.vx;
+        b.y += b.vy + Math.sin(b.wobble) * b.wAmp;
+        if (b.x - b.r > fw + 100) { b.x = -b.r - 100; b.y = Math.random() * fh; }
+        if (b.y < -b.r) b.y = fh + b.r;
+        if (b.y > fh + b.r) b.y = -b.r;
+        const g = fCtx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+        g.addColorStop(0, `rgba(${b.cr},${b.cg},${b.cb},${b.opacity})`);
+        g.addColorStop(0.4, `rgba(${b.cr},${b.cg},${b.cb},${b.opacity * 0.45})`);
+        g.addColorStop(1, `rgba(${b.cr},${b.cg},${b.cb},0)`);
+        fCtx.fillStyle = g;
+        fCtx.beginPath();
+        fCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        fCtx.fill();
+      }
+      requestAnimationFrame(drawFog);
+    };
+    drawFog();
+  }
+
   const form = document.querySelector('[data-whatsapp-form]');
   form?.addEventListener('submit', event => {
     event.preventDefault();
