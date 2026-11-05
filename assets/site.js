@@ -115,7 +115,7 @@
       `Project details: ${data.get('details') || 'I would like to discuss this with your team.'}`
     ].join('\n');
     const status = form.querySelector('.form-status');
-    if (status) status.textContent = 'Your enquiry is ready. WhatsApp will open so you can send it to our team.';
+    if (status) status.textContent = 'A WhatsApp draft is being prepared. Review it and press Send to reach us. If it does not open, use the direct WhatsApp or email links on this page.';
     window.open(`https://wa.me/2349038753287?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   });
 })();
