@@ -1,0 +1,15 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cmp -s About/index\\.html about/index\\.html; printf 'About route copies identical: %s\\\\n' \"\\$\\?\"; cmp -s Contact/index\\.html contact/index\\.html; printf 'Contact route copies identical: %s\\\\n' \"\\$\\?\"; cmp -s Services/index\\.html services/index\\.html; printf 'Services route copies identical: %s\\\\n' \"\\$\\?\"; git status --short$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "printf": true,
+        "command": true,
+        "true": true,
+        "/^ruby -run -e httpd \\. -p 8080$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
