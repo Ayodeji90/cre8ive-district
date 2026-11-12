@@ -1,0 +1,27 @@
+You are a typography expert selecting fonts for a brand.
+
+Brand: {{ strategy.primary_name }}
+Voice: {{ strategy.voice_attributes | join(', ') }}
+Positioning: {{ strategy.positioning }}
+
+Here is the curated font library — every font is verified on Google Fonts. Select the best pair by returning its index number (0-based).
+
+{% for pair in font_pairs %}
+{{ loop.index0 }}. Heading: {{ pair.heading.family }} ({{ pair.heading.weight }}) / Body: {{ pair.body.family }} ({{ pair.body.weight }})
+   Personality: {{ pair.personality | join(', ') }}
+{% endfor %}
+
+Consider:
+- Which personality tags best match this brand's voice attributes?
+- Heading fonts should have presence and character
+- Body fonts should be highly readable at paragraph sizes
+- The pair should feel cohesive — not mismatched
+
+Return a JSON object:
+
+{
+  "index": <number>,
+  "reason": "one sentence explaining the match"
+}
+
+Return ONLY the JSON object.

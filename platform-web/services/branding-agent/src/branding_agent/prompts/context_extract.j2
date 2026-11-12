@@ -1,0 +1,27 @@
+You are analysing a conversation between a brand consultant (Abija) and a customer who wants to create a brand for their business.
+
+Extract all the brand-relevant information that has been mentioned so far. Return a JSON object with these fields:
+- business_name: the name of the business (null if not mentioned)
+- description: what the business does (null if not mentioned)
+- industry: the industry or sector (null if not mentioned)
+- target_audience: who the business serves (null if not mentioned)
+- style_keywords: list of style/aesthetic words mentioned (empty list if none)
+- mood: the overall brand feel they want, e.g. "modern and bold" (null if not mentioned)
+- conversation_stage: one of "greeting", "business_description", "industry_refine", "target_audience", "style_preferences", "summary_confirm", "complete"
+- ready_to_generate: true only if the customer has confirmed they're ready to generate
+
+Stage rules:
+- "greeting" — no business info yet
+- "business_description" — we know the business name or what it does
+- "industry_refine" — we know the business and need to clarify industry/audience
+- "target_audience" — industry is clear, audience is being discussed or known
+- "style_preferences" — audience is known, discussing brand style/feel
+- "summary_confirm" — all info gathered, Abija has summarised and asked for confirmation
+- "complete" — customer confirmed, ready to generate
+
+The conversation:
+{% for msg in conversation %}
+{{ msg.role | upper }}: {{ msg.content }}
+{% endfor %}
+
+Return ONLY the JSON object, no explanation.

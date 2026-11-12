@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cre8ive-district.example/contracts/v1/strategy-package.schema.json",
+  "title": "Validated Brand Strategy Package",
+  "description": "A normalized brief with a deterministic-validation result, ready for human review or blocked after bounded retries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "brief", "strategy", "validation"],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ready_for_review", "blocked"]
+    },
+    "brief": {
+      "$ref": "brand-brief.schema.json"
+    },
+    "strategy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/strategy"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    }
+  },
+  "$defs": {
+    "strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_name",
+        "name_alternatives",
+        "positioning",
+        "tagline",
+        "voice_attributes",
+        "brand_story",
+        "elevator_pitch",
+        "target_description",
+        "industry_keywords"
+      ],
+      "properties": {
+        "primary_name": {"type": "string"},
+        "name_alternatives": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "positioning": {"type": "string"},
+        "tagline": {"type": "string"},
+        "voice_attributes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "brand_story": {"type": "string"},
+        "elevator_pitch": {"type": "string"},
+        "target_description": {"type": "string"},
+        "industry_keywords": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "field", "message"],
+      "properties": {
+        "code": {"type": "string"},
+        "field": {"type": "string"},
+        "message": {"type": "string"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "attempts", "issues"],
+      "properties": {
+        "passed": {"type": "boolean"},
+        "attempts": {"type": "integer", "minimum": 1},
+        "issues": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/issue"}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "ready_for_review"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "strategy": {"$ref": "#/$defs/strategy"},
+          "validation": {
+            "properties": {
+              "passed": {"const": true},
+              "issues": {"maxItems": 0}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "blocked"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "strategy": {"type": "null"},
+          "validation": {
+            "properties": {
+              "passed": {"const": false},
+              "issues": {"minItems": 1}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

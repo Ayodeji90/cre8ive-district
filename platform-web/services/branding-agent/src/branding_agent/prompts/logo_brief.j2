@@ -1,0 +1,38 @@
+Professional logo design for a brand called "{{ strategy.primary_name }}".
+
+Brand context:
+- Industry: {{ industry }}
+- Positioning: {{ strategy.positioning }}
+- Voice: {{ strategy.voice_attributes | join(', ') }}
+{% if style %}
+- Style preferences: {{ style | join(', ') }}
+{% endif %}
+
+{% if concept == "icon_wordmark" %}
+Logo type: Icon + Wordmark combination
+The logo must include both a distinctive icon/symbol AND the business name "{{ strategy.primary_name }}" as clean text beside or below the icon. The icon should represent the brand's essence — {% if "modern" in strategy.voice_attributes or "bold" in strategy.voice_attributes %}use geometric or abstract shapes{% elif "warm" in strategy.voice_attributes or "friendly" in strategy.voice_attributes %}use organic, approachable shapes{% else %}use clean, balanced shapes{% endif %}.
+
+{% elif concept == "abstract_mark" %}
+Logo type: Abstract mark (no text)
+A distinctive abstract symbol that captures the essence of {{ strategy.primary_name }}. Should be unique enough to be recognisable on its own — think of it as a signature. {% if "modern" in strategy.voice_attributes %}Clean geometric forms with intentional negative space.{% elif "elegant" in strategy.voice_attributes or "luxury" in strategy.voice_attributes %}Refined, minimal forms with graceful proportions.{% else %}Bold, memorable forms with clear silhouette.{% endif %}
+
+{% elif concept == "lettermark" %}
+Logo type: Creative lettermark / typography
+A typographic logo using the {% if strategy.primary_name | length <= 4 %}full name{% else %}initials{% endif %} of "{{ strategy.primary_name }}" with creative typography treatment. The letterforms should express the brand personality — {% if "bold" in strategy.voice_attributes %}strong weight with distinctive character{% elif "elegant" in strategy.voice_attributes %}refined serifs or graceful ligatures{% else %}clean, contemporary letter styling{% endif %}.
+{% endif %}
+
+Style requirements:
+- Flat design, NO gradients, NO photorealism, NO 3D effects
+- Clean vector style suitable for scaling from favicon to billboard
+- White or transparent background
+- High contrast between elements
+- Professional logo design quality — this will go on business cards and signage
+
+Colour guidance:
+{% if style and "minimal" in style %}
+- Monochrome or two-tone only
+{% else %}
+- Use colours that feel {{ strategy.voice_attributes | join(' and ') }}
+{% endif %}
+
+DO NOT include: clip art, stock imagery, generic shapes, low-quality rendering, busy/cluttered elements, photographic elements
