@@ -13,11 +13,21 @@ parsing is not included.
 
 ## Local development
 
+Run these commands from the repository root:
+
 ```bash
-python -m pip install -e ".[dev]"
-AI_STUB=true SERVICE_API_KEY=local-development-key \
-  uvicorn branding_agent.api.app:app --reload --port 8001
-pytest
+cd platform-web/services/branding-agent
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+AI_STUB=true SERVICE_API_KEY=local-development-key .venv/bin/python -m uvicorn \
+  branding_agent.api.app:app --reload --port 8001
+```
+
+In another terminal, run the tests from the repository root:
+
+```bash
+cd platform-web/services/branding-agent
+.venv/bin/python -m pytest
 ```
 
 The platform calls `/v1/chat/*` and `/v1/brand/*` using the `X-Agent-Key`
