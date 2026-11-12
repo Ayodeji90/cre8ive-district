@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @cre8ive/marketing build",
+  "outputDirectory": "apps/marketing/.next",
   "cleanUrls": true,
   "trailingSlash": false
 }
