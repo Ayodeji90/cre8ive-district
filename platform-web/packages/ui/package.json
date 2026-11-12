@@ -1,0 +1,10 @@
+{
+  "name": "@cre8ive/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "peerDependencies": { "react": "^19.0.0" },
+  "dependencies": { "react-hot-toast": "^2.5.2" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" }
+}

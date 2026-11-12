@@ -1,0 +1,21 @@
+.vercel
+.gstack/
+node_modules/
+.next/
+.turbo/
+.local-bin/
+dist/
+coverage/
+# Local signup fallback written before waitlist storage moved to the API.
+.data/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+*.egg-info/
+.pytest_cache/
+.gstack/
+.env
+.env.*
+!.env.example

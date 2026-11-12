@@ -1,0 +1,150 @@
+name: "Deploy · Backend"
+
+# Triggers on push to main when backend files change.
+# Builds Docker images and pushes to GitHub Container Registry (ghcr.io).
+# Deployment to the container host (Railway / Fly / ECS) is triggered
+# by the registry push — configure that in your hosting provider.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform-web/api/**"
+      - "platform-web/services/branding-agent/**"
+      - "platform-web/services/website-agent/**"
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false # don't cancel in-flight deploys
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cre8ive
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Determine which services changed ──────────────────────────────
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      branding-agent: ${{ steps.filter.outputs.branding-agent }}
+      website-agent: ${{ steps.filter.outputs.website-agent }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'platform-web/api/**'
+            branding-agent:
+              - 'platform-web/services/branding-agent/**'
+            website-agent:
+              - 'platform-web/services/website-agent/**'
+
+  # ── Build & push API ──────────────────────────────────────────────
+  deploy-api:
+    name: "Build & push · API"
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-api
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: platform-web/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+  # ── Build & push Branding Agent ───────────────────────────────────
+  deploy-branding-agent:
+    name: "Build & push · Branding Agent"
+    needs: changes
+    if: needs.changes.outputs.branding-agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-branding-agent
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: platform-web/services/branding-agent
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=branding-agent
+          cache-to: type=gha,scope=branding-agent,mode=max
+
+  # ── Build & push Website Agent ────────────────────────────────────
+  deploy-website-agent:
+    name: "Build & push · Website Agent"
+    needs: changes
+    if: needs.changes.outputs.website-agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-website-agent
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: platform-web/services/website-agent
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=website-agent
+          cache-to: type=gha,scope=website-agent,mode=max

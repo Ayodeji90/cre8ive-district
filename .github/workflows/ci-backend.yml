@@ -1,0 +1,196 @@
+name: "CI · Backend"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform-web/api/**"
+      - "platform-web/services/**"
+  pull_request:
+    paths:
+      - "platform-web/api/**"
+      - "platform-web/services/**"
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ── API (FastAPI monolith) ────────────────────────────────────────
+  api-lint:
+    name: "API · Lint"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  api-test:
+    name: "API · Test"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cre8ive_test
+          POSTGRES_USER: cre8ive
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cre8ive -d cre8ive_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_test"
+      REDIS_URL: "redis://localhost:6379"
+      AI_STUB: "true"
+      BRANDING_AGENT_URL: "http://localhost:8001"
+      BRANDING_AGENT_API_KEY: "ci-test-key"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: platform-web/api/pyproject.toml
+
+      - run: pip install ".[dev]"
+      - run: alembic upgrade head
+      - run: python -m pytest --tb=short -q
+
+  # ── Branding Agent ────────────────────────────────────────────────
+  branding-agent-lint:
+    name: "Branding Agent · Lint"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/services/branding-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install ruff
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+
+  branding-agent-test:
+    name: "Branding Agent · Test"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/services/branding-agent
+    env:
+      AI_STUB: "true"
+      ENV: "test"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: platform-web/services/branding-agent/pyproject.toml
+
+      - name: Install system dependencies for WeasyPrint / CairoSVG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libcairo2 libpango-1.0-0 libpangoft2-1.0-0 \
+            libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info
+
+      - run: pip install ".[dev]"
+      - run: PYTHONPATH=src python -m pytest --tb=short -q
+
+  # ── Website Agent ─────────────────────────────────────────────────
+  website-agent-lint:
+    name: "Website Agent · Lint"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/services/website-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install ruff
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+
+  website-agent-test:
+    name: "Website Agent · Test"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-web/services/website-agent
+    env:
+      AI_STUB: "true"
+      ENV: "test"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: platform-web/services/website-agent/pyproject.toml
+
+      - run: pip install ".[dev]" 2>/dev/null || pip install .
+      - run: PYTHONPATH=src python -m pytest --tb=short -q --passWithNoTests
+
+  # ── Docker build sanity check ─────────────────────────────────────
+  docker-build:
+    name: "Docker · Build check"
+    needs: [api-test, branding-agent-test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - { context: "platform-web/api", tag: "api" }
+          - { context: "platform-web/services/branding-agent", tag: "branding-agent" }
+          - { context: "platform-web/services/website-agent", tag: "website-agent" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          tags: cre8ive/${{ matrix.service.tag }}:ci
+          load: false
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

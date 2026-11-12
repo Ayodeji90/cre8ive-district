@@ -1,0 +1,30 @@
+graph LR
+    Platform["Platform API + Worker<br/>Users · businesses · payments<br/>job status · review · persistence"]
+    Contracts["Shared contracts<br/>Versioned requests, results,<br/>artifacts and events"]
+
+    subgraph Branding["Branding Agent — independent service"]
+        BrandingAPI["Authenticated HTTP API"]
+        Chat["Abija chat + context extraction"]
+        BrandWorkflow["Brand strategy, logo, palette,<br/>fonts, copy and validation"]
+        Render["Logo variants, guidelines PDF<br/>and downloadable brand kit"]
+        Providers["LLM + image provider adapters"]
+        Prompts["Branding prompts + domain models"]
+        BrandingAPI --> Chat
+        BrandingAPI --> BrandWorkflow
+        BrandingAPI --> Render
+        Chat --> Providers
+        BrandWorkflow --> Providers
+        BrandWorkflow --> Prompts
+    end
+
+    subgraph Website["Website Agent — independent service"]
+        WebsiteAPI["Website Agent API — scaffold"]
+        WebsitePrompt["Website content prompt"]
+        WebsiteAPI -. planned .-> WebsitePrompt
+    end
+
+    Platform <-->|"HTTP + shared payloads"| BrandingAPI
+    Platform -. "brand-version input, future" .-> WebsiteAPI
+    Contracts -. "validate both sides" .-> Platform
+    Contracts -. "validate both sides" .-> BrandingAPI
+    Contracts -. "validate both sides" .-> WebsiteAPI

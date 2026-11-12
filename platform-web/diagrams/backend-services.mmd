@@ -1,0 +1,57 @@
+graph TD
+    subgraph Routers["API Routers"]
+        R_HEALTH["GET /health"]
+        R_USERS["POST /api/users\nGET /api/users/me"]
+        R_BIZ["POST /api/businesses\nGET /api/businesses/:id"]
+        R_CHAT["POST /api/chat/start\nWS /api/chat/:id"]
+        R_BRANDS["POST /api/brands/generate\nGET /api/brands/:id"]
+        R_BILL["POST /api/billing/orders\nGET /api/billing/orders/:id"]
+        R_HOOK["POST /api/webhooks/paystack"]
+        R_REV["GET /api/admin/reviews\nPOST claim/approve/revise"]
+        R_ASSET["GET /api/assets/:brand_id"]
+        R_DLVR["POST /api/delivery/send"]
+    end
+
+    subgraph Svcs["Service Modules"]
+        S_CHAT["chat.py 206L\nConversation Mgmt\nContext Loading\nMessage Processing"]
+        S_BRAND["brand_gen.py 123L\nOrchestrator\nCalls AI Pipeline"]
+        S_BILL["billing.py 149L\nOrder CRUD\nPaystack Integration"]
+        S_REV["reviews.py 265L\nStatus Transitions\nClaim/Approve/Reject"]
+        S_ASSET["assets.py 235L\nLogo Render\nPDF + ZIP Bundle\nR2 Upload"]
+        S_DLVR["delivery.py 105L\nEmail Dispatch\nFulfillment"]
+        S_STORE["storage.py 102L\nR2 Operations\nUpload/Download"]
+        S_PAY["paystack.py 77L\nAPI Client\nVerify Transaction"]
+        S_EMAIL["email.py 64L\nResend Client\nTemplate Render"]
+        S_JOBS["jobs.py 45L\narq Definitions\nBackground Tasks"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        DB["PostgreSQL 16\n8 Tables"]
+        REDIS["Redis 7\nSession + Queue"]
+        WORKER["arq Worker\nBackground Jobs"]
+        EBUS["EventBus\nSSE to Admin"]
+    end
+
+    R_CHAT --> S_CHAT
+    R_BRANDS --> S_BRAND
+    R_BILL --> S_BILL
+    R_HOOK --> S_PAY
+    R_REV --> S_REV
+    R_ASSET --> S_ASSET
+    R_DLVR --> S_DLVR
+
+    S_CHAT -->|"stream AI"| S_BRAND
+    S_BRAND -->|"create review"| S_REV
+    S_REV -->|"on approve"| S_JOBS
+    S_JOBS -->|"enqueue"| S_ASSET
+    S_ASSET -->|"upload"| S_STORE
+    S_ASSET -->|"done"| S_DLVR
+    S_DLVR --> S_EMAIL
+    S_BILL --> S_PAY
+    S_REV --> EBUS
+
+    S_CHAT --> REDIS
+    S_BRAND --> DB
+    S_REV --> DB
+    S_STORE -->|"R2"| DB
+    S_JOBS --> WORKER

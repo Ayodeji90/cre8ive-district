@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ business.name }} — Brand Guidelines</title>
+  <style>
+    @page { size: A4; margin: 22mm 18mm; }
+    body { font-family: "Plus Jakarta Sans", "Helvetica Neue", Arial, sans-serif; color: #2d2d2d; background: #f5f5ee; }
+    .cover { min-height: 240mm; display: flex; flex-direction: column; justify-content: space-between; }
+    .eyebrow { letter-spacing: .18em; text-transform: uppercase; font-size: 10px; color: #6b6b63; }
+    h1 { font-size: 46px; margin: 0; line-height: 1.05; }
+    .tagline { font-size: 22px; color: {{ brand.colors.palette.accent | default('#f36b35') }}; }
+    .swatch { display: inline-block; width: 48mm; height: 30mm; margin: 0 3mm 4mm 0; border: 1px solid #ddd; }
+    .swatch-label { font-size: 10px; margin-top: 2mm; }
+    h2 { font-size: 26px; margin-top: 14mm; border-bottom: 2px solid #2d2d2d; padding-bottom: 2mm; }
+    h3 { font-size: 16px; margin-bottom: 2mm; }
+    p, li { font-size: 12px; line-height: 1.6; }
+    .font-sample-heading { font-size: 30px; font-weight: 700; }
+    .font-sample-body { font-size: 14px; }
+    .page-break { page-break-before: always; }
+    .muted { color: #6b6b63; }
+    .palette-row { display: flex; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div>
+      <p class="eyebrow">Cre8ive District · Brand Guidelines</p>
+      <h1>{{ business.name }}</h1>
+      <p class="tagline">{{ brand.strategy.tagline | default('') }}</p>
+    </div>
+    <div>
+      <p class="muted">{{ brand.strategy.positioning | default('') }}</p>
+      <p class="muted">Version {{ brand.version }} · {{ generated_at }}</p>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <h2>The brand</h2>
+    <h3>Story</h3>
+    <p>{{ brand.strategy.brand_story | default('') }}</p>
+    <h3>Positioning</h3>
+    <p>{{ brand.strategy.positioning | default('') }}</p>
+    <h3>Voice</h3>
+    <p>{{ brand.strategy.voice_attributes | default([]) | join(', ') }}</p>
+    <h3>Elevator pitch</h3>
+    <p>{{ brand.strategy.elevator_pitch | default(brand.copy.elevator_pitch | default('')) }}</p>
+  </section>
+
+  <section class="page-break">
+    <h2>Colour palette</h2>
+    <div class="palette-row">
+      {% for name, hex in (brand.colors.palette | default({})).items() %}
+      <div>
+        <div class="swatch" style="background: {{ hex }}"></div>
+        <div class="swatch-label"><strong>{{ name|title }}</strong><br />{{ hex }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="muted">Use the primary colour for key actions, the neutral for body text, and the background as the default canvas.</p>
+  </section>
+
+  <section class="page-break">
+    <h2>Typography</h2>
+    <h3>Heading — {{ brand.fonts.heading.family | default('Plus Jakarta Sans') }} {{ brand.fonts.heading.weight | default(700) }}</h3>
+    <p class="font-sample-heading">{{ business.name }}</p>
+    <h3>Body — {{ brand.fonts.body.family | default('Plus Jakarta Sans') }} {{ brand.fonts.body.weight | default(400) }}</h3>
+    <p class="font-sample-body">{{ brand.strategy.brand_story | default('') }}</p>
+  </section>
+
+  <section class="page-break">
+    <h2>Logo usage</h2>
+    <ul>
+      <li>Keep clear space around the mark equal to the height of the letter “C” in the wordmark.</li>
+      <li>Minimum digital size: 64px wide. Minimum print size: 15mm wide.</li>
+      <li>Do not stretch, rotate, recolour outside the palette, or place on low-contrast backgrounds.</li>
+      <li>Use the favicon build for browser tabs and the avatar build for social profiles.</li>
+    </ul>
+    <h3>Files included</h3>
+    <ul>
+      <li>logo-1024.png, logo-512.png, logo-256.png, logo-128.png, logo-64.png</li>
+      <li>favicon.ico, avatar-400.png</li>
+      <li>palette.json, fonts.txt, guidelines.pdf</li>
+    </ul>
+  </section>
+</body>
+</html>

@@ -1,0 +1,77 @@
+graph LR
+    subgraph Discovery["1. Discovery"]
+        LAND["Visit Marketing Site"]
+        EXPLORE["Browse Services\nSee Packages"]
+    end
+
+    subgraph Onboard["2. Sign Up"]
+        GAUTH["Google OAuth\nor Magic Link"]
+        PROFILE["Create Profile\nBusiness Details"]
+    end
+
+    subgraph Chat["3. Chat with Abija"]
+        GREET["Abija Greets\nAsks About Business"]
+        CONV["7-Stage Conversation\nBrand Discovery"]
+        BRIEF["Brand Brief\nExtracted by AI"]
+    end
+
+    subgraph Pay["4. Choose + Pay"]
+        TIER["Select Package\n20k / 60k / 120k"]
+        PAYSTACK["Paystack Checkout\nNaira Payment"]
+        CONFIRM["Order Confirmed\nWebhook Received"]
+    end
+
+    subgraph Generate["5. Brand Generation"]
+        STRAT["AI Generates\nBrand Strategy"]
+        LOGO["3 Logo Concepts\nIdeogram 3"]
+        PAL["Color Palette\nWCAG Validated"]
+        FONT["Font Pairing\nGoogle Fonts"]
+        COPY_G["Copy Suite\nTagline + Bio"]
+        QA["Quality Validation\nAutomated Checks"]
+    end
+
+    subgraph Review["6. Designer Review"]
+        QUEUE["Enters Review Queue\nAdmin Dashboard"]
+        CLAIM["Designer Claims\nReviews Brand"]
+        DECIDE{{"Approve?"}}
+        REVISE["Request Revisions\nBack to AI"]
+    end
+
+    subgraph Deliver["7. Delivery"]
+        RENDER["Render Assets\nPDF + ZIP + SVG"]
+        UPLOAD["Upload to R2\nPermanent Storage"]
+        EMAIL["Send Email\nDownload Links"]
+        DASH["Available in\nPlatform Dashboard"]
+    end
+
+    LAND --> EXPLORE
+    EXPLORE --> GAUTH
+    GAUTH --> PROFILE
+    PROFILE --> GREET
+    GREET --> CONV
+    CONV --> BRIEF
+
+    BRIEF --> TIER
+    TIER --> PAYSTACK
+    PAYSTACK --> CONFIRM
+
+    CONFIRM --> STRAT
+    STRAT --> LOGO
+    STRAT --> PAL
+    STRAT --> FONT
+    STRAT --> COPY_G
+    LOGO --> QA
+    PAL --> QA
+    FONT --> QA
+    COPY_G --> QA
+
+    QA --> QUEUE
+    QUEUE --> CLAIM
+    CLAIM --> DECIDE
+    DECIDE -->|"Yes"| RENDER
+    DECIDE -->|"No"| REVISE
+    REVISE -->|"Re-generate"| STRAT
+
+    RENDER --> UPLOAD
+    UPLOAD --> EMAIL
+    UPLOAD --> DASH
