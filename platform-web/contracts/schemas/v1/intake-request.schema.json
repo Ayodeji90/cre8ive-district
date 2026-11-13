@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cre8ive-district.example/contracts/v1/intake-request.schema.json",
+  "title": "Branding Intake Request",
+  "description": "Structured or conversational input to the Branding Agent. Uploaded-file extraction is outside v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "business_id",
+    "raw_brief",
+    "structured_brief",
+    "conversation_history",
+    "allow_name_generation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "business_id": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "raw_brief": {
+      "type": ["string", "null"],
+      "pattern": ".*\\S.*",
+      "maxLength": 20000
+    },
+    "structured_brief": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/structuredBrief"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversation_history": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "content"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"]
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*",
+            "maxLength": 10000
+          }
+        }
+      }
+    },
+    "allow_name_generation": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "raw_brief": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["raw_brief"]
+    },
+    {
+      "properties": {
+        "structured_brief": {
+          "$ref": "#/$defs/structuredBrief"
+        }
+      },
+      "required": ["structured_brief"]
+    },
+    {
+      "properties": {
+        "conversation_history": {
+          "type": "array",
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "user"
+              }
+            },
+            "required": ["role"]
+          }
+        }
+      },
+      "required": ["conversation_history"]
+    }
+  ],
+  "$defs": {
+    "structuredBrief": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "business_name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["business_name"]
+        },
+        {
+          "properties": {
+            "core_offering": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["core_offering"]
+        },
+        {
+          "properties": {
+            "industry": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["industry"]
+        },
+        {
+          "properties": {
+            "target_audience": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["target_audience"]
+        },
+        {
+          "properties": {
+            "market_or_geography": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["market_or_geography"]
+        },
+        {
+          "properties": {
+            "products_or_services": {
+              "minItems": 1
+            }
+          },
+          "required": ["products_or_services"]
+        },
+        {
+          "properties": {
+            "brand_personality": {
+              "minItems": 1
+            }
+          },
+          "required": ["brand_personality"]
+        },
+        {
+          "properties": {
+            "style_keywords": {
+              "minItems": 1
+            }
+          },
+          "required": ["style_keywords"]
+        },
+        {
+          "properties": {
+            "desired_mood": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["desired_mood"]
+        },
+        {
+          "properties": {
+            "differentiators": {
+              "minItems": 1
+            }
+          },
+          "required": ["differentiators"]
+        },
+        {
+          "properties": {
+            "must_avoid": {
+              "minItems": 1
+            }
+          },
+          "required": ["must_avoid"]
+        }
+      ],
+      "properties": {
+        "business_name": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 160
+        },
+        "core_offering": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 2000
+        },
+        "industry": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 160
+        },
+        "target_audience": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 500
+        },
+        "market_or_geography": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 300
+        },
+        "products_or_services": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*"
+          }
+        },
+        "brand_personality": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*"
+          }
+        },
+        "style_keywords": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*"
+          }
+        },
+        "desired_mood": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 300
+        },
+        "differentiators": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*"
+          }
+        },
+        "must_avoid": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": ".*\\S.*"
+          }
+        }
+      }
+    }
+  }
+}
