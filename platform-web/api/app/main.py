@@ -1,11 +1,12 @@
 """FastAPI application: middleware, lifespan, error handling, router mounting."""
 
+import json
 import uuid
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
 import structlog
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,6 +17,7 @@ from app.config import get_settings
 from app.deps import get_event_bus
 from app.logging import configure_logging, get_logger
 from app.routers import (
+    agent_runs,
     assets,
     auth_adapter,
     billing,
@@ -27,6 +29,7 @@ from app.routers import (
     reviews,
     users,
     waitlist,
+    websites,
 )
 
 log = get_logger(__name__)
@@ -144,6 +147,53 @@ api_router.include_router(billing.webhook_router)
 api_router.include_router(reviews.internal_router)
 api_router.include_router(reviews.admin_router)
 api_router.include_router(assets.router)
+api_router.include_router(agent_runs.router)
 api_router.include_router(delivery.router)
 api_router.include_router(waitlist.router)
+api_router.include_router(websites.router)
+@api_router.get("/internal/businesses/{business_id}/agent-context")
+async def agent_business_context(
+    business_id: uuid.UUID,
+    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key"),
+):
+    if not settings.SERVICE_API_KEY or x_agent_key != settings.SERVICE_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing service key")
+    from sqlalchemy import func, select
+    from app.models import Business, Brand, Order, Website
+    from app.db import async_session_factory
+    async with async_session_factory() as db:
+        business = await db.get(Business, business_id)
+        if business is None:
+            raise HTTPException(status_code=404, detail="Business not found")
+        brand = (await db.execute(
+            select(Brand).where(Brand.business_id == business_id).order_by(Brand.created_at.desc())
+        )).scalars().first()
+        website = (await db.execute(
+            select(Website).where(Website.business_id == business_id).order_by(Website.created_at.desc())
+        )).scalars().first()
+        paid_order_stats = await db.execute(
+            select(func.count(Order.id), func.coalesce(func.sum(Order.amount), 0)).where(
+                Order.business_id == business_id, Order.status == "paid"
+            )
+        )
+        total_orders, total_revenue = paid_order_stats.one()
+        brand_summary = ""
+        if brand:
+            brand_summary = json.dumps(
+                {"strategy": brand.strategy, "colors": brand.colors, "fonts": brand.fonts},
+                ensure_ascii=False,
+            )
+        return {
+            "business_id": str(business.id), "business_name": business.name,
+            "business_description": business.description or "", "industry": business.industry or "",
+            "target_audience": (business.preferences or {}).get("target_audience", ""),
+            "has_brand": bool(brand and brand.status != "failed"),
+            "brand_summary": brand_summary,
+            "has_website": bool(website and website.status == "deployed"),
+            "website_url": website.deployment_url or "" if website else "",
+            "website_page_count": len(website.pages or []) if website else 0,
+            "total_revenue": float(total_revenue),
+            "total_orders": total_orders,
+            "known_competitors": [],
+        }
 app.include_router(api_router)

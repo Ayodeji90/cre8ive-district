@@ -1,1 +1,3 @@
-"""Deterministic website checks and review signals."""
+from website_agent.quality.checker import WebsiteQualityChecker
+
+__all__ = ["WebsiteQualityChecker"]

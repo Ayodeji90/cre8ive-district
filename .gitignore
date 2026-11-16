@@ -1,2 +1,5 @@
 .vercel
 .gstack/
+.env
+.env.*
+!.env.example

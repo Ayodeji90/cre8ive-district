@@ -1,24 +1,31 @@
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.config import Settings
+from app.config import Settings, get_settings
 from app.db import get_db
 from app.deps import get_app_settings, get_paystack
 from app.logging import get_logger
 from app.models import Order, User
+from app.ownership import assert_business_owner
 from app.schemas.billing import (
     BillingInitializeRequest,
     BillingInitializeResponse,
     BillingVerifyResponse,
+    CreditBalanceResponse,
+    CreditDeductRequest,
+    CreditDeductResponse,
+    CreditLedgerResponse,
+    CreditTransactionResponse,
 )
 from app.schemas.order import OrderResponse
 from app.services import billing as billing_service
+from app.services import credits as credits_service
 from app.services.paystack import PaystackClient, PaystackError, verify_webhook_signature
 
 log = get_logger(__name__)
@@ -34,6 +41,8 @@ async def initialize(
     settings: Settings = Depends(get_app_settings),
     user: User = Depends(get_current_user),
 ) -> BillingInitializeResponse:
+    # Verify the caller owns the business they're paying for
+    await assert_business_owner(db, payload.business_id, user)
     try:
         order, data = await billing_service.initialize_payment(db, paystack, settings, payload)
     except billing_service.BillingError as exc:
@@ -57,14 +66,33 @@ async def verify(
     paystack: PaystackClient = Depends(get_paystack),
     user: User = Depends(get_current_user),
 ) -> BillingVerifyResponse:
+    order_id: uuid.UUID | None = None
     try:
-        paystack_status, order = await billing_service.verify_payment(db, paystack, reference)
+        order_id = uuid.UUID(reference)
+    except ValueError:
+        pass
+    order = await db.get(Order, order_id) if order_id is not None else None
+    if order is None:
+        order = (
+            await db.execute(select(Order).where(Order.paystack_ref == reference))
+        ).scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    await assert_business_owner(db, order.business_id, user)
+    authorized_order = order
+
+    try:
+        paystack_status, verified_order = await billing_service.verify_payment(
+            db, paystack, reference
+        )
     except PaystackError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if verified_order is not None and verified_order.id != authorized_order.id:
+        raise HTTPException(status_code=502, detail="Payment provider returned a mismatched order")
     return BillingVerifyResponse(
         reference=reference,
         status=paystack_status,
-        order_id=order.id if order else None,
+        order_id=authorized_order.id,
     )
 
 
@@ -74,10 +102,108 @@ async def history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[Order]:
+    await assert_business_owner(db, business_id, user)
     result = await db.execute(
         select(Order).where(Order.business_id == business_id).order_by(Order.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+@router.get("/{business_id}/credits", response_model=CreditBalanceResponse)
+async def get_credits(
+    business_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CreditBalanceResponse:
+    await assert_business_owner(db, business_id, user)
+    try:
+        balance = await credits_service.get_credit_balance(db, business_id)
+    except credits_service.BusinessNotFound as exc:
+        raise HTTPException(status_code=404, detail="Business not found") from exc
+    return CreditBalanceResponse(business_id=business_id, balance=balance)
+
+
+@router.get("/{business_id}/credits/ledger", response_model=CreditLedgerResponse)
+async def get_credit_ledger(
+    business_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CreditLedgerResponse:
+    await assert_business_owner(db, business_id, user)
+    try:
+        balance = await credits_service.get_credit_balance(db, business_id)
+        txs, total = await credits_service.list_transactions(db, business_id, page, limit)
+    except credits_service.BusinessNotFound as exc:
+        raise HTTPException(status_code=404, detail="Business not found") from exc
+
+    return CreditLedgerResponse(
+        business_id=business_id,
+        balance=balance,
+        transactions=[CreditTransactionResponse.model_validate(tx) for tx in txs],
+        total=total,
+        page=page,
+        limit=limit,
+    )
+
+
+@router.post("/{business_id}/credits/deduct", response_model=CreditDeductResponse)
+async def deduct_credits(
+    business_id: uuid.UUID,
+    payload: CreditDeductRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CreditDeductResponse:
+    await assert_business_owner(db, business_id, user)
+    try:
+        new_balance, tx = await credits_service.deduct_credits(
+            db,
+            business_id,
+            payload.amount,
+            description=payload.description,
+            reference_id=payload.reference_id,
+        )
+    except credits_service.BusinessNotFound as exc:
+        raise HTTPException(status_code=404, detail="Business not found") from exc
+    except credits_service.InsufficientCreditsError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return CreditDeductResponse(
+        business_id=business_id,
+        amount_deducted=payload.amount,
+        new_balance=new_balance,
+        transaction_id=tx.id,
+    )
+
+
+@router.post("/internal/{business_id}/credits/deduct", response_model=CreditDeductResponse)
+async def deduct_credits_internal(
+    business_id: uuid.UUID,
+    payload: CreditDeductRequest,
+    db: AsyncSession = Depends(get_db),
+    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key"),
+) -> CreditDeductResponse:
+    settings = get_settings()
+    if not settings.SERVICE_API_KEY or x_agent_key != settings.SERVICE_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing service key")
+    try:
+        balance, tx = await credits_service.deduct_credits(
+            db, business_id, payload.amount,
+            description=payload.description, reference_id=payload.reference_id,
+        )
+    except credits_service.BusinessNotFound as exc:
+        raise HTTPException(status_code=404, detail="Business not found") from exc
+    except credits_service.InsufficientCreditsError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return CreditDeductResponse(
+        business_id=business_id, amount_deducted=payload.amount,
+        new_balance=balance, transaction_id=tx.id,
+    )
 
 
 @webhook_router.post("/paystack", status_code=status.HTTP_200_OK)

@@ -3,11 +3,12 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_role
+from app.auth import get_current_user, require_role
 from app.config import Settings
 from app.db import get_db
 from app.deps import get_app_settings, get_storage
-from app.models import User
+from app.models import Brand, Business, User
+from app.ownership import assert_business_owner
 from app.schemas.brand import BrandAssetFiles, DownloadResponse, RenderResponse
 from app.services.assets import (
     AssetRenderError,
@@ -39,10 +40,11 @@ async def render_assets(
 async def list_assets(
     brand_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(require_role("admin", "designer")),
+    user: User = Depends(get_current_user),
 ) -> BrandAssetFiles:
     try:
         brand = await brand_for_render(db, brand_id)
+        await _authorize_brand_access(db, brand, user)
     except AssetRenderError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return BrandAssetFiles(
@@ -61,10 +63,11 @@ async def download_assets(
     db: AsyncSession = Depends(get_db),
     storage: Storage = Depends(get_storage),
     settings: Settings = Depends(get_app_settings),
-    user: User = Depends(require_role("admin", "designer")),
+    user: User = Depends(get_current_user),
 ) -> DownloadResponse:
     try:
         brand = await brand_for_render(db, brand_id)
+        await _authorize_brand_access(db, brand, user)
     except AssetRenderError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if not brand.kit_zip_url:
@@ -77,3 +80,12 @@ async def download_assets(
     return DownloadResponse(
         url=await storage.presigned_url(key, expires_in=expires_in), expires_in=expires_in
     )
+
+
+async def _authorize_brand_access(db: AsyncSession, brand: Brand, user: User) -> None:
+    if user.role in {"admin", "designer"}:
+        return
+    business = await db.get(Business, brand.business_id)
+    if business is None:
+        raise HTTPException(status_code=404, detail="Business not found")
+    await assert_business_owner(db, business.id, user)

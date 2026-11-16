@@ -27,28 +27,74 @@ services:
 
   branding-agent:
     build: ./services/branding-agent
+    env_file:
+      - path: ../.env
+        required: false
     environment:
-      ENV: development
-      AI_STUB: "true"
+      ENV: ${ENV:-development}
+      AI_STUB: ${AI_STUB:-true}
       SERVICE_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
     ports:
       - "8001:8000"
 
   website-agent:
     build: ./services/website-agent
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      ENV: ${ENV:-development}
+      DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
+      USE_IN_MEMORY_REPO: "false"
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      VERCEL_TOKEN: ${VERCEL_TOKEN:-}
+      AI_STUB: ${AI_STUB:-true}
+      DEPLOY_STUB: ${DEPLOY_STUB:-true}
     ports:
       - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  run-engine:
+    build: ./services/run-engine
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      ENV: ${ENV:-development}
+      AI_STUB: ${AI_STUB:-true}
+      DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
+      REDIS_URL: redis://redis:6379/0
+      USE_IN_MEMORY_REPO: "false"
+      USE_IN_MEMORY_EVENTS: "false"
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      PLATFORM_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      PLATFORM_API_URL: http://api:8000
+    ports:
+      - "8003:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   api:
     build: ./api
     env_file:
-      - path: ./api/.env
+      - path: ../.env
         required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
       REDIS_URL: redis://redis:6379
       BRANDING_AGENT_URL: http://branding-agent:8000
       BRANDING_AGENT_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
+      RUN_ENGINE_URL: http://run-engine:8002
+      RUN_ENGINE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      WEBSITE_AGENT_URL: http://website-agent:8000
+      WEBSITE_AGENT_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
     ports:
       - "8000:8000"
     depends_on:
@@ -57,6 +103,8 @@ services:
       redis:
         condition: service_healthy
       branding-agent:
+        condition: service_started
+      website-agent:
         condition: service_started
     command: >
       sh -c "alembic upgrade head &&
@@ -67,19 +115,24 @@ services:
   worker:
     build: ./api
     env_file:
-      - path: ./api/.env
+      - path: ../.env
         required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
       REDIS_URL: redis://redis:6379
       BRANDING_AGENT_URL: http://branding-agent:8000
       BRANDING_AGENT_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
+      WEBSITE_AGENT_URL: http://website-agent:8000
+      WEBSITE_AGENT_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       branding-agent:
+        condition: service_started
+      website-agent:
         condition: service_started
     command: arq app.worker.WorkerSettings
     volumes:

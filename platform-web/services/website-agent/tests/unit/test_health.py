@@ -1,10 +1,16 @@
-from fastapi.testclient import TestClient
-
+import httpx
+import pytest
 from website_agent.api.app import app
 
 
-def test_health() -> None:
-    response = TestClient(app).get("/health")
+@pytest.mark.asyncio
+async def test_health() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "website-agent"}
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["service"] == "website-agent"

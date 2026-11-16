@@ -1,15 +1,17 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import decode_token, get_current_user
+from app.config import get_settings
 from app.db import async_session_factory, get_db
 from app.deps import get_ai
 from app.llm.base import AIService
 from app.logging import get_logger
 from app.models import Conversation, User
+from app.ownership import assert_business_owner, assert_conversation_owner
 from app.schemas.conversation import (
     ChatHistoryResponse,
     ChatStartRequest,
@@ -31,8 +33,16 @@ async def start_chat(
     ai: AIService = Depends(get_ai),
     user: User = Depends(get_current_user),
 ) -> ChatStartResponse:
+    # If the caller specifies a business_id, verify they own it.
+    if payload.business_id is not None:
+        await assert_business_owner(db, payload.business_id, user)
+
     conversation, greeting = await chat_service.start_conversation(
-        db, ai, user_id=payload.user_id or user.id, business_id=payload.business_id
+        db,
+        ai,
+        user_id=user.id,
+        business_id=payload.business_id,
+        initial_idea=payload.initial_idea,
     )
     return ChatStartResponse(
         conversation_id=conversation.id,
@@ -49,10 +59,7 @@ async def history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> ChatHistoryResponse:
-    try:
-        conversation = await chat_service.get_conversation(db, conversation_id)
-    except chat_service.ConversationNotFound as exc:
-        raise HTTPException(status_code=404, detail="Conversation not found") from exc
+    conversation = await assert_conversation_owner(db, conversation_id, user)
     messages, total = await chat_service.list_messages(db, conversation_id, page, limit)
     return ChatHistoryResponse(
         conversation_id=conversation.id,
@@ -71,6 +78,32 @@ async def chat_socket(
     token: str | None = Query(default=None),
 ) -> None:
     await websocket.accept()
+    # --- Auth ---
+    if not token:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+    try:
+        settings = getattr(websocket.app.state, "settings", None) or get_settings()
+        claims = decode_token(token, settings)
+    except Exception:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+    from app.auth import _claim_uuid
+    ws_user_id = _claim_uuid(claims)
+    if ws_user_id is None:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+    try:
+        async with async_session_factory() as auth_db:
+            from app.models import User as _User
+            ws_user = await auth_db.get(_User, ws_user_id)
+        if ws_user is None:
+            await websocket.close(code=4401, reason="Authentication required")
+            return
+    except Exception:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+    # --- /Auth ---
     try:
         async with async_session_factory() as db:
             try:
@@ -78,8 +111,22 @@ async def chat_socket(
             except chat_service.ConversationNotFound:
                 await websocket.close(code=4404, reason="Conversation not found")
                 return
+            if conversation.user_id != ws_user.id:
+                await websocket.close(code=4403, reason="Forbidden")
+                return
+            if conversation.business_id is not None:
+                from app.models import Business
 
-            ai = getattr(websocket.app.state, "ai", None) or get_ai()
+                business = await db.get(Business, conversation.business_id)
+                if business is None or business.owner_id != ws_user.id:
+                    await websocket.close(code=4403, reason="Forbidden")
+                    return
+
+            if get_ai in websocket.app.dependency_overrides:
+                ai_override = websocket.app.dependency_overrides[get_ai]
+                ai = ai_override() if callable(ai_override) else ai_override
+            else:
+                ai = getattr(websocket.app.state, "ai", None) or get_ai()
             redis = getattr(websocket.app.state, "redis", None)
 
             await websocket.send_json(
@@ -135,6 +182,19 @@ async def chat_socket(
                         "context": conversation.context,
                     }
                 )
+
+                if (
+                    conversation.context.get("website_job_status") in {"queued", "generating"}
+                    and conversation.business_id
+                ):
+                    await websocket.send_json(
+                        {
+                            "type": "generation_started",
+                            "business_id": str(conversation.business_id),
+                            "job_type": "website_generation",
+                            "status": "queued",
+                        }
+                    )
     except WebSocketDisconnect:
         log.info("chat_disconnected", conversation_id=str(conversation_id))
         async with async_session_factory() as db:

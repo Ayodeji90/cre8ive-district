@@ -14,6 +14,19 @@ PLAN_AMOUNTS: dict[str, float] = {
     "brand_web": 60000.00,
     "brand_complete": 120000.00,
     "designer_review": 25000.00,
+    # Credit packs for autonomous agent execution
+    "credits_50": 5000.00,
+    "credits_200": 18000.00,
+    "credits_500": 40000.00,
+}
+
+PLAN_CREDITS: dict[str, int] = {
+    "brand_starter": 50,
+    "brand_web": 150,
+    "brand_complete": 400,
+    "credits_50": 50,
+    "credits_200": 200,
+    "credits_500": 500,
 }
 
 

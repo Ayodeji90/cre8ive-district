@@ -1,0 +1,25 @@
+<section class="section" style="text-align: center; background: radial-gradient(circle at top, var(--brand-surface, #fafaf7) 0%, var(--brand-bg, #fff) 70%);">
+  <div class="container" style="max-width: 840px;">
+    {% if section.props.eyebrow %}
+      <span style="display: inline-block; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; font-weight: 700; color: var(--brand-accent, #ff6b35); margin-bottom: 1rem;">
+        {{ section.props.eyebrow }}
+      </span>
+    {% endif %}
+    <h1 style="font-size: clamp(2.2rem, 5vw, 3.8rem); margin-bottom: 1.5rem;">
+      {{ section.props.headline }}
+    </h1>
+    <p style="font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--brand-neutral-700, #444); margin-bottom: 2.25rem; line-height: 1.6;">
+      {{ section.props.subheadline }}
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="{{ section.props.cta_url or 'https://wa.me/' + site.business.whatsapp_number }}" class="btn btn-primary">
+        {{ section.props.cta_text or 'Get Started' }}
+      </a>
+      {% if section.props.secondary_cta_text %}
+        <a href="{{ section.props.secondary_cta_url or '#services' }}" class="btn btn-outline">
+          {{ section.props.secondary_cta_text }}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</section>

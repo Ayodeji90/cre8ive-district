@@ -70,7 +70,8 @@ def get_paystack() -> PaystackClient:
 
 
 def get_ai() -> AIService:
-    from app.llm.factory import AIServiceNotConfigured, get_ai_service
+    from app.llm.base import AIServiceNotConfigured
+    from app.llm.factory import get_ai_service
 
     try:
         return get_ai_service(get_settings())

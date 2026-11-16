@@ -11,7 +11,13 @@ from tests.conftest import auth_headers
 
 async def test_render_brand_assets_builds_kit(session_factory, storage, monkeypatch):
     async with session_factory() as db:
-        business = Business(name="Render Co", slug="render-co", industry="Fashion", plan="starter")
+        business = Business(
+            name="Render Co",
+            slug="render-co",
+            industry="Fashion",
+            plan="starter",
+            owner_id=uuid.uuid4(),
+        )
         db.add(business)
         await db.commit()
         await db.refresh(business)
@@ -66,7 +72,7 @@ async def test_render_brand_assets_builds_kit(session_factory, storage, monkeypa
     assert result["logo_urls"] == [{"url": "https://assets.test/logo-1024.png"}]
 
 
-async def test_delivery_marks_order_fulfilled(client, admin, storage, session_factory, monkeypatch):
+async def test_delivery_marks_order_fulfilled(client, admin, customer, storage, session_factory, monkeypatch):
     settings = Settings(
         R2_PUBLIC_URL="https://assets.test",
         RESEND_API_KEY="re_test",
@@ -89,6 +95,7 @@ async def test_delivery_marks_order_fulfilled(client, admin, storage, session_fa
             contact_email="founder@lagosthreads.test",
             plan="starter",
             status="active",
+            owner_id=customer.id,
         )
         db.add(business)
         await db.commit()

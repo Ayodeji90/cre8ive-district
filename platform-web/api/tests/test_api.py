@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.deps import get_app_settings, get_paystack, get_storage
 from app.main import app
-from app.models import Brand, Business, Order, Review
+from app.models import Brand, Business, Conversation, Order, Review, User
 from app.services.paystack import verify_webhook_signature
 from tests.conftest import auth_headers
 
@@ -16,6 +16,7 @@ from tests.conftest import auth_headers
 class FakePaystack:
     def __init__(self) -> None:
         self.initialized: list[dict] = []
+        self.verified: list[str] = []
 
     async def initialize_transaction(self, **kwargs) -> dict:
         self.initialized.append(kwargs)
@@ -27,6 +28,7 @@ class FakePaystack:
         }
 
     async def verify_transaction(self, reference: str) -> dict:
+        self.verified.append(reference)
         return {"status": "success", "reference": reference}
 
 
@@ -76,6 +78,7 @@ async def test_business_create_and_update(client, customer):
     headers = auth_headers(customer)
     business = await create_business(client, headers)
     assert business["slug"] == "lagos-threads"
+    assert business["owner_id"] == str(customer.id)
 
     patched = await client.patch(
         f"/api/businesses/{business['id']}",
@@ -84,6 +87,132 @@ async def test_business_create_and_update(client, customer):
     )
     assert patched.status_code == 200
     assert patched.json()["location"] == "Lekki, Lagos"
+
+
+async def test_list_businesses_scoped_to_owner(client, customer, admin):
+    """A user only sees their own businesses."""
+    customer_headers = auth_headers(customer)
+    admin_headers = auth_headers(admin)
+
+    biz = await create_business(client, customer_headers)
+
+    # Customer sees their business
+    res = await client.get("/api/businesses", headers=customer_headers)
+    assert res.status_code == 200
+    ids = [b["id"] for b in res.json()]
+    assert biz["id"] in ids
+
+    # Admin (different user) sees none of the customer's businesses
+    admin_res = await client.get("/api/businesses", headers=admin_headers)
+    assert admin_res.status_code == 200
+    admin_ids = [b["id"] for b in admin_res.json()]
+    assert biz["id"] not in admin_ids
+
+
+async def test_business_get_requires_ownership(client, customer, admin):
+    """Cannot read another user's business."""
+    biz = await create_business(client, auth_headers(customer))
+    res = await client.get(f"/api/businesses/{biz['id']}", headers=auth_headers(admin))
+    assert res.status_code == 403
+
+
+async def test_business_patch_requires_ownership(client, customer, admin):
+    """Cannot update another user's business."""
+    biz = await create_business(client, auth_headers(customer))
+    res = await client.patch(
+        f"/api/businesses/{biz['id']}",
+        json={"name": "Stolen Name"},
+        headers=auth_headers(admin),
+    )
+    assert res.status_code == 403
+
+
+async def test_customer_cannot_change_business_plan_or_status(client, customer):
+    headers = auth_headers(customer)
+    biz = await create_business(client, headers)
+    response = await client.patch(
+        f"/api/businesses/{biz['id']}",
+        json={"plan": "brand_complete", "status": "active"},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+    unchanged = await client.get(f"/api/businesses/{biz['id']}", headers=headers)
+    assert unchanged.status_code == 200
+    assert unchanged.json()["plan"] == "free"
+    assert unchanged.json()["status"] == "onboarding"
+
+
+async def test_business_create_rejects_caller_supplied_owner_and_plan(client, customer):
+    response = await client.post(
+        "/api/businesses",
+        json={"name": "Owner Spoof", "owner_id": str(uuid.uuid4()), "plan": "pro"},
+        headers=auth_headers(customer),
+    )
+    assert response.status_code == 422
+
+
+async def test_chat_start_with_foreign_business_is_forbidden(client, customer, admin):
+    """Cannot start a chat using another user's business_id."""
+    biz = await create_business(client, auth_headers(customer))
+    res = await client.post(
+        "/api/chat/start",
+        json={"business_id": biz["id"]},
+        headers=auth_headers(admin),
+    )
+    assert res.status_code == 403
+
+
+async def test_chat_rejects_conversation_attached_to_foreign_business(
+    client, customer, admin, session_factory
+):
+    foreign_business = await create_business(client, auth_headers(admin))
+    started = await client.post("/api/chat/start", json={}, headers=auth_headers(customer))
+    assert started.status_code == 200
+    conversation_id = uuid.UUID(started.json()["conversation_id"])
+
+    async with session_factory() as db:
+        conversation = await db.get(Conversation, conversation_id)
+        conversation.business_id = uuid.UUID(foreign_business["id"])
+        await db.commit()
+
+    history = await client.get(
+        f"/api/chat/{conversation_id}/history", headers=auth_headers(customer)
+    )
+    assert history.status_code == 403
+
+
+async def test_billing_forbidden_on_foreign_business(client, customer, admin, paystack):
+    """Cannot access billing routes for another user's business."""
+    biz = await create_business(client, auth_headers(customer))
+    res = await client.get(
+        f"/api/billing/{biz['id']}/credits",
+        headers=auth_headers(admin),
+    )
+    assert res.status_code == 403
+
+
+async def test_payment_verify_checks_order_owner_before_provider_call(
+    client, customer, admin, paystack
+):
+    business = await create_business(client, auth_headers(customer))
+    initialized = await client.post(
+        "/api/billing/initialize",
+        json={
+            "plan": "brand_starter",
+            "business_id": business["id"],
+            "email": "customer@example.com",
+        },
+        headers=auth_headers(customer),
+    )
+    assert initialized.status_code == 200
+
+    response = await client.post(
+        f"/api/billing/verify/{initialized.json()['reference']}",
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 403
+    assert paystack.verified == []
 
 
 async def test_chat_start_and_history(client, customer):
@@ -125,10 +254,17 @@ async def test_billing_initialize_creates_order(client, customer, paystack):
     assert history.json()[0]["status"] == "pending"
 
 
-async def test_paystack_webhook_is_signed_and_idempotent(client, session_factory):
+async def test_paystack_webhook_is_signed_and_idempotent(client, customer, session_factory):
     settings = get_settings()
     async with session_factory() as db:
-        business = Business(name="Webhook Co", slug="webhook-co", plan="free", status="onboarding")
+        # Business requires owner_id — use the customer fixture
+        business = Business(
+            name="Webhook Co",
+            slug="webhook-co",
+            plan="free",
+            status="onboarding",
+            owner_id=customer.id,
+        )
         db.add(business)
         await db.commit()
         await db.refresh(business)
@@ -206,6 +342,20 @@ async def test_brand_generation_requires_paid_order(client, customer, session_fa
         assert reviews[0].status == "pending"
 
 
+async def test_brand_generation_forbidden_on_foreign_business(
+    client, customer, admin, session_factory
+):
+    """Cannot generate a brand for another user's business."""
+    headers = auth_headers(customer)
+    business = await create_business(client, headers)
+    res = await client.post(
+        "/api/brands/generate",
+        json={"business_id": business["id"]},
+        headers=auth_headers(admin),
+    )
+    assert res.status_code == 403
+
+
 async def test_review_workflow(client, customer, admin, session_factory):
     headers = auth_headers(customer)
     admin_headers = auth_headers(admin)
@@ -259,9 +409,15 @@ async def test_review_workflow(client, customer, admin, session_factory):
         assert brand_row.status == "approved"
 
 
-async def test_asset_download_uses_signed_url(client, admin, storage, session_factory):
-    business = Business(name="Assets Co", slug="assets-co", plan="starter", status="active")
+async def test_asset_download_uses_signed_url(client, admin, customer, storage, session_factory):
     async with session_factory() as db:
+        business = Business(
+            name="Assets Co",
+            slug="assets-co",
+            plan="starter",
+            status="active",
+            owner_id=customer.id,  # business needs an owner
+        )
         db.add(business)
         await db.commit()
         await db.refresh(business)
@@ -287,3 +443,49 @@ async def test_asset_download_uses_signed_url(client, admin, storage, session_fa
     assert response.status_code == 200, response.text
     assert response.json()["url"] == "https://signed.test/brand/kit.zip?expires=604800"
     assert response.json()["expires_in"] == 604800
+
+
+async def test_customer_can_access_own_assets_but_not_another_business(
+    client, customer, admin, storage, session_factory
+):
+    async with session_factory() as db:
+        business = Business(
+            name="Customer Assets",
+            slug="customer-assets",
+            plan="free",
+            status="onboarding",
+            owner_id=customer.id,
+        )
+        db.add(business)
+        await db.commit()
+        await db.refresh(business)
+        brand = Brand(
+            business_id=business.id,
+            colors={"palette": {"primary": "#F36B35"}},
+            kit_zip_url="https://assets.test/customer/kit.zip",
+            status="draft",
+        )
+        db.add(brand)
+        await db.commit()
+        await db.refresh(brand)
+        brand_id = brand.id
+        other_customer = User(
+            id=uuid.uuid4(), email="other-customer@example.com", name="Other", role="customer"
+        )
+        db.add(other_customer)
+        await db.commit()
+
+    app.dependency_overrides[get_storage] = lambda: storage
+    try:
+        owned = await client.get(
+            f"/api/assets/{brand_id}/download", headers=auth_headers(customer)
+        )
+        foreign = await client.get(
+            f"/api/assets/{brand_id}/files", headers=auth_headers(other_customer)
+        )
+    finally:
+        app.dependency_overrides.pop(get_storage, None)
+
+    assert owned.status_code == 200, owned.text
+    assert owned.json()["url"].startswith("https://signed.test/customer/kit.zip")
+    assert foreign.status_code == 403

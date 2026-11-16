@@ -6,8 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatStartRequest(BaseModel):
-    user_id: uuid.UUID | None = None
     business_id: uuid.UUID | None = None
+    initial_idea: str | None = None
 
 
 class ChatStartResponse(BaseModel):

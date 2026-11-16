@@ -1,5 +1,14 @@
 import os
+import sys
 import uuid
+from pathlib import Path
+
+API_DIR = Path(__file__).resolve().parent.parent
+if str(API_DIR) not in sys.path:
+    sys.path.insert(0, str(API_DIR))
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR.parent))
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite://"
 os.environ["JWT_SECRET"] = "test-secret"
@@ -103,15 +112,14 @@ class FakeStorage:
 
 @pytest_asyncio.fixture
 async def engine():
-    engine = create_async_engine(
-        "sqlite+aiosqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    import app.db as app_db
+
+    engine = app_db.engine
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
-    await engine.dispose()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest_asyncio.fixture

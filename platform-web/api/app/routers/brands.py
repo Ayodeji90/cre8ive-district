@@ -10,6 +10,7 @@ from app.deps import get_ai, get_event_bus
 from app.events import EventBus
 from app.llm.base import AIService
 from app.models import Brand, Business, Order, User
+from app.ownership import assert_business_owner
 from app.schemas.brand import BrandGenerateRequest, BrandResponse
 from app.services.brand_gen import BrandGenerationError, generate_brand
 
@@ -24,9 +25,8 @@ async def generate(
     event_bus: EventBus = Depends(get_event_bus),
     user: User = Depends(get_current_user),
 ) -> Brand:
-    business = await db.get(Business, payload.business_id)
-    if business is None:
-        raise HTTPException(status_code=404, detail="Business not found")
+    # Verify ownership before generating
+    business = await assert_business_owner(db, payload.business_id, user)
 
     paid_order = (
         await db.execute(
@@ -57,6 +57,10 @@ async def get_brand(
     brand = await db.get(Brand, brand_id)
     if brand is None:
         raise HTTPException(status_code=404, detail="Brand not found")
+    # Verify the caller owns the business this brand belongs to
+    business = await db.get(Business, brand.business_id)
+    if business is None or business.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this brand")
     return brand
 
 
@@ -66,6 +70,9 @@ async def get_latest_brand(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Brand:
+    # Verify ownership of the business first
+    await assert_business_owner(db, business_id, user)
+
     brand = (
         await db.execute(
             select(Brand)

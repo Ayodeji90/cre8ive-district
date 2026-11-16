@@ -1,7 +1,7 @@
-.PHONY: dev up down migrate revision test lint typecheck fmt worker agent website-agent
+.PHONY: dev up down migrate revision test lint typecheck fmt worker agent website-agent run-engine
 
 up:
-	docker compose up -d postgres redis branding-agent website-agent
+	docker compose --env-file ../.env up -d postgres redis branding-agent website-agent run-engine
 
 down:
 	docker compose down
@@ -17,6 +17,9 @@ agent:
 
 website-agent:
 	cd services/website-agent && uvicorn website_agent.api.app:app --reload --port 8002
+
+run-engine:
+	cd services/run-engine && PYTHONPATH=src uvicorn run_engine.api.app:app --reload --port 8003
 
 migrate:
 	cd api && alembic upgrade head

@@ -22,7 +22,15 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
-engine = create_async_engine(settings.DATABASE_URL, pool_pre_ping=True)
+
+engine_kwargs: dict = {"pool_pre_ping": True}
+if "sqlite" in settings.DATABASE_URL:
+    from sqlalchemy.pool import StaticPool
+
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["poolclass"] = StaticPool
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

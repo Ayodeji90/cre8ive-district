@@ -103,6 +103,22 @@ async def apply_charge_success(
 
     await refresh_business_plan(db, order.business_id)
 
+    from app.services.paystack import PLAN_CREDITS
+    credits_to_grant = PLAN_CREDITS.get(order.plan, 0)
+    if credits_to_grant > 0:
+        from app.services import credits as credits_service
+        try:
+            await credits_service.add_credits(
+                db,
+                order.business_id,
+                credits_to_grant,
+                transaction_type="topup" if order.plan.startswith("credits_") else "plan_grant",
+                description=f"Payment for {order.plan}: +{credits_to_grant} credits",
+                reference_id=str(order.id),
+            )
+        except Exception:
+            log.warning("credit_grant_failed_for_order", order_id=str(order.id), exc_info=True)
+
     try:
         from app.services.jobs import enqueue_brand_generation
 
@@ -133,7 +149,10 @@ async def verify_payment(
     paystack_status = data.get("status", "failed")
     order: Order | None = None
     if paystack_status == "success":
-        order = await apply_charge_success(db, data.get("reference") or reference)
+        verified_reference = data.get("reference") or reference
+        if verified_reference != reference:
+            raise PaystackError("Paystack returned a mismatched payment reference")
+        order = await apply_charge_success(db, verified_reference)
     else:
         candidate = (
             await db.execute(select(Order).where(Order.paystack_ref == reference))

@@ -4,6 +4,7 @@ from app.models.account import Account
 from app.models.brand import Brand
 from app.models.business import Business
 from app.models.conversation import Conversation
+from app.models.credit import CreditTransaction
 from app.models.message import Message
 from app.models.order import Order
 from app.models.review import Review
@@ -17,6 +18,7 @@ __all__ = [
     "Brand",
     "Business",
     "Conversation",
+    "CreditTransaction",
     "Message",
     "Order",
     "Review",

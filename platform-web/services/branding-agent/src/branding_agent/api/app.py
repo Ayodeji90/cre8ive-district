@@ -80,6 +80,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.storage = build_storage(settings)
     except StorageNotConfigured:
         if settings.ENV != "development":
+        if settings.ENV not in ("development", "local", "test"):
             raise
         app.state.storage = LocalStorage()
     yield

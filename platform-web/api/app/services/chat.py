@@ -1,6 +1,7 @@
 """Conversation transport: persistence, Redis session context, AI hand-off."""
 
 import json
+import re
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -116,21 +117,94 @@ async def start_conversation(
     user_id: uuid.UUID | None = None,
     business_id: uuid.UUID | None = None,
     channel: str = "webchat",
+    initial_idea: str | None = None,
 ) -> tuple[Conversation, Message]:
+    if business_id is None and user_id is not None:
+        from app.models.business import Business
+
+        business_id = await db.scalar(
+            select(Business.id)
+            .where(Business.owner_id == user_id)
+            .order_by(Business.created_at.desc())
+            .limit(1)
+        )
+        if business_id is None:
+            new_biz = Business(
+                name="My Business",
+                slug=f"biz-{uuid.uuid4().hex[:8]}",
+                status="onboarding",
+                plan="free",
+                credit_balance=50,
+                owner_id=user_id,
+            )
+            db.add(new_biz)
+            await db.flush()
+            business_id = new_biz.id
+
     conversation = Conversation(
         user_id=user_id,
         business_id=business_id,
         channel=channel,
-        context={"conversation_stage": "greeting", "ready_to_generate": False},
+        context={
+            "conversation_stage": "greeting",
+            "ready_to_generate": False,
+            "business_id": str(business_id) if business_id else None,
+        },
     )
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
 
-    greeting = ""
-    async for chunk in ai.respond(conversation.context, [], ""):
-        greeting += chunk
-    greeting = greeting.strip() or "Hi! What business are we building today?"
+    if initial_idea and initial_idea.strip():
+        await add_message(
+            db,
+            conversation,
+            role="customer",
+            direction="inbound",
+            content=initial_idea.strip(),
+        )
+        greeting = ""
+        async for chunk in ai.respond(
+            conversation.context,
+            [{"role": "user", "content": initial_idea.strip()}],
+            initial_idea.strip(),
+        ):
+            greeting += chunk
+        greeting = (
+            greeting.strip()
+            or f"I love that concept! Let's build your brand around {initial_idea.strip()[:50]}."
+        )
+
+        try:
+            initial_extract = await ai.extract_context(
+                [{"role": "user", "content": initial_idea.strip()}]
+            )
+            if initial_extract:
+                conversation.context.update(
+                    {k: v for k, v in initial_extract.items() if v is not None}
+                )
+                if conversation.business_id:
+                    from app.models.business import Business
+                    biz = await db.get(Business, conversation.business_id)
+                    if biz is not None:
+                        if initial_extract.get("business_name"):
+                            biz.name = str(initial_extract["business_name"]).strip()
+                        if initial_extract.get("industry"):
+                            biz.industry = str(initial_extract["industry"]).strip()
+                        if initial_extract.get("description"):
+                            biz.description = str(initial_extract["description"]).strip()
+                        db.add(biz)
+        except Exception:
+            log.warning(
+                "initial_context_extraction_failed",
+                conversation_id=str(conversation.id),
+                exc_info=True,
+            )
+    else:
+        greeting = ""
+        async for chunk in ai.respond(conversation.context, [], ""):
+            greeting += chunk
+        greeting = greeting.strip() or "Hi! What business are we building today?"
 
     message = await add_message(
         db,
@@ -189,6 +263,70 @@ async def process_message(
     try:
         extracted = await ai.extract_context(history)
         context.update({k: v for k, v in extracted.items() if v is not None})
+        if conversation.business_id:
+            from app.models.business import Business
+            business = await db.get(Business, conversation.business_id)
+            if business is not None:
+                updated = False
+                if extracted.get("business_name") and str(extracted["business_name"]).strip():
+                    business.name = str(extracted["business_name"]).strip()
+                    if business.slug.startswith("biz-"):
+                        base_slug = (
+                            re.sub(r"[^a-z0-9]+", "-", business.name.lower()).strip("-")[:80]
+                            or "business"
+                        )
+                        slug = base_slug
+                        collision = await db.scalar(
+                            select(Business.id).where(
+                                Business.slug == slug, Business.id != business.id
+                            )
+                        )
+                        if collision:
+                            slug = f"{base_slug}-{str(business.id)[:6]}"
+                        business.slug = slug
+                    updated = True
+                if extracted.get("industry") and str(extracted["industry"]).strip():
+                    business.industry = str(extracted["industry"]).strip()
+                    updated = True
+                if extracted.get("description") and str(extracted["description"]).strip():
+                    business.description = str(extracted["description"]).strip()
+                    updated = True
+                if extracted.get("location") and str(extracted["location"]).strip():
+                    business.location = str(extracted["location"]).strip()[:120]
+                    updated = True
+                if extracted.get("contact_phone") and str(extracted["contact_phone"]).strip():
+                    business.contact_phone = str(extracted["contact_phone"]).strip()[:20]
+                    updated = True
+                if extracted.get("contact_email") and str(extracted["contact_email"]).strip():
+                    business.contact_email = str(extracted["contact_email"]).strip()[:200]
+                    updated = True
+                preferences = dict(business.preferences or {})
+                for key in (
+                    "target_audience",
+                    "services",
+                    "brand_preferences",
+                    "mood",
+                    "style_keywords",
+                ):
+                    value = extracted.get(key)
+                    if (
+                        isinstance(value, str)
+                        and value.strip()
+                        and key not in ("services", "style_keywords")
+                    ):
+                        preferences[key] = value.strip()[:1000]
+                    elif key in ("services", "style_keywords") and isinstance(value, list):
+                        preferences[key] = [
+                            str(item)[:120] for item in value[:12] if str(item).strip()
+                        ]
+                if preferences != (business.preferences or {}):
+                    business.preferences = preferences
+                    updated = True
+                if context.get("ready_to_generate") and business.status == "onboarding":
+                    business.status = "ready"
+                    updated = True
+                if updated:
+                    db.add(business)
     except Exception:  # extraction failure should never break the chat
         log.warning(
             "context_extraction_failed",
@@ -201,6 +339,16 @@ async def process_message(
     await db.commit()
 
     if context.get("ready_to_generate") and conversation.business_id:
-        from app.services.jobs import enqueue_brand_generation
-
-        await enqueue_brand_generation(conversation.business_id)
+        from app.services.website_gen import WebsiteGenerationError, queue_website_generation
+        try:
+            result = await queue_website_generation(db, conversation.business_id)
+            context["website_job_status"] = result["status"]
+        except WebsiteGenerationError:
+            context["website_job_status"] = "failed"
+            log.warning(
+                "website_generation_queue_failed",
+                business_id=str(conversation.business_id),
+                exc_info=True,
+            )
+        await save_context(redis, conversation, context)
+        await db.commit()

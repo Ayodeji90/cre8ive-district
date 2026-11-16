@@ -1,13 +1,14 @@
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_db
 from app.models import Business, User
+from app.ownership import assert_business_owner
 from app.schemas.business import BusinessCreate, BusinessResponse, BusinessUpdate
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
@@ -27,6 +28,20 @@ async def _unique_slug(db: AsyncSession, base: str) -> str:
     return slug
 
 
+@router.get("", response_model=list[BusinessResponse])
+async def list_businesses(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[Business]:
+    """Return all businesses owned by the authenticated user."""
+    result = await db.execute(
+        select(Business)
+        .where(Business.owner_id == user.id)
+        .order_by(Business.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 @router.post("", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED)
 async def create_business(
     payload: BusinessCreate,
@@ -37,6 +52,7 @@ async def create_business(
     business = Business(
         **payload.model_dump(exclude={"slug"}),
         slug=await _unique_slug(db, base),
+        owner_id=user.id,
     )
     db.add(business)
     await db.commit()
@@ -50,10 +66,7 @@ async def get_business(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Business:
-    business = await db.get(Business, business_id)
-    if business is None:
-        raise HTTPException(status_code=404, detail="Business not found")
-    return business
+    return await assert_business_owner(db, business_id, user)
 
 
 @router.patch("/{business_id}", response_model=BusinessResponse)
@@ -63,9 +76,7 @@ async def update_business(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Business:
-    business = await db.get(Business, business_id)
-    if business is None:
-        raise HTTPException(status_code=404, detail="Business not found")
+    business = await assert_business_owner(db, business_id, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(business, field, value)
     await db.commit()
