@@ -1,7 +1,9 @@
 import uuid
+
 import pytest
-from app.main import app
+
 from app.deps import get_ai
+from app.main import app
 from tests.conftest import auth_headers
 
 
@@ -23,15 +25,27 @@ class StreamingAIService:
             yield "Who is your ideal customer for this?"
 
     async def extract_context(self, history):
-        user_turns = sum(1 for m in history if m["role"] in ("user", "customer"))
         last_content = history[-1]["content"].lower() if history else ""
         confirmed = "launch" in last_content or "yes" in last_content
-        has_audience = any("audience" in m["content"].lower() or "creatives" in m["content"].lower() for m in history)
-        has_vibe = any("vibrant" in m["content"].lower() or "contemporary" in m["content"].lower() for m in history)
+        has_audience = any(
+            "audience" in m["content"].lower() or "creatives" in m["content"].lower()
+            for m in history
+        )
+        has_vibe = any(
+            "vibrant" in m["content"].lower() or "contemporary" in m["content"].lower()
+            for m in history
+        )
         return {
-            "conversation_stage": "complete" if confirmed else "style_preferences" if has_vibe else "target_audience" if has_audience else "business_description",
+            "conversation_stage": "complete"
+            if confirmed
+            else "style_preferences"
+            if has_vibe
+            else "target_audience"
+            if has_audience
+            else "business_description",
             "ready_to_generate": confirmed,
             "business_name": "Lagos Bloom",
+            "description": "Handcrafted luxury leather bags made in Lagos",
             "target_audience": "Young urban creatives" if has_audience else None,
             "mood": "Vibrant Afro-contemporary" if has_vibe else None,
             "style_keywords": ["vibrant", "warm", "earthy"] if has_vibe else [],
@@ -56,7 +70,9 @@ async def test_chat_start_with_initial_idea(client, customer):
         assert "Luxury African" in data["greeting_message"] or "I love" in data["greeting_message"]
 
         # Check history has both user's initial idea and Abija's response
-        history_resp = await client.get(f"/api/chat/{data['conversation_id']}/history", headers=headers)
+        history_resp = await client.get(
+            f"/api/chat/{data['conversation_id']}/history", headers=headers
+        )
         assert history_resp.status_code == 200
         history = history_resp.json()
         assert history["total"] == 2
@@ -78,6 +94,7 @@ async def test_websocket_chat_streaming(customer, session_factory):
     try:
         # Create a conversation in DB
         from app.models import Conversation
+
         async with session_factory() as db:
             conv = Conversation(
                 user_id=customer.id,
@@ -137,10 +154,12 @@ async def test_websocket_chat_streaming(customer, session_factory):
 # Security tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_websocket_no_token_rejected(customer, session_factory):
     """WebSocket connection without a token must be closed with code 4401."""
     from starlette.testclient import TestClient
+
     from app.models import Conversation
 
     async with session_factory() as db:
@@ -165,6 +184,7 @@ async def test_websocket_no_token_rejected(customer, session_factory):
 async def test_websocket_invalid_token_rejected(customer, session_factory):
     """WebSocket connection with a garbage token must be closed with code 4401."""
     from starlette.testclient import TestClient
+
     from app.models import Conversation
 
     async with session_factory() as db:
@@ -188,10 +208,11 @@ async def test_websocket_invalid_token_rejected(customer, session_factory):
 @pytest.mark.asyncio
 async def test_websocket_wrong_user_forbidden(session_factory):
     """User B cannot connect to a conversation that belongs to User A — expect 4403."""
-    from starlette.testclient import TestClient
-    from app.models import Conversation, User
     from jose import jwt
+    from starlette.testclient import TestClient
+
     from app.config import get_settings
+    from app.models import Conversation, User
 
     settings = get_settings()
 
@@ -232,14 +253,19 @@ async def test_websocket_wrong_user_forbidden(session_factory):
 @pytest.mark.asyncio
 async def test_history_wrong_user_forbidden(client, session_factory):
     """User B calling GET /{conv_id}/history owned by User A must get HTTP 403."""
-    from app.models import Conversation, User
     from jose import jwt
+
     from app.config import get_settings
+    from app.models import Conversation, User
 
     settings = get_settings()
 
-    user_a = User(id=uuid.uuid4(), email="user_a_hist@example.com", name="User A Hist", role="customer")
-    user_b = User(id=uuid.uuid4(), email="user_b_hist@example.com", name="User B Hist", role="customer")
+    user_a = User(
+        id=uuid.uuid4(), email="user_a_hist@example.com", name="User A Hist", role="customer"
+    )
+    user_b = User(
+        id=uuid.uuid4(), email="user_b_hist@example.com", name="User B Hist", role="customer"
+    )
     async with session_factory() as db:
         db.add(user_a)
         db.add(user_b)
@@ -307,7 +333,7 @@ async def test_guided_intake_end_to_end_flow(customer, session_factory, monkeypa
     3. The Business record in the database is continuously updated with the brief.
     4. Upon confirmation (ready_to_generate), business status becomes 'ready' and generation is queued.
     """
-    from app.models import Business, Conversation
+    from app.models import Business
     from app.services import chat as chat_service
 
     fake_ai = StreamingAIService()
@@ -350,7 +376,10 @@ async def test_guided_intake_end_to_end_flow(customer, session_factory, monkeypa
 
             # Verify business record updated with audience
             await db.refresh(biz)
-            assert biz.preferences.get("target_audience") == "Young urban creatives" or biz.preferences.get("target_audience") is not None
+            assert (
+                biz.preferences.get("target_audience") == "Young urban creatives"
+                or biz.preferences.get("target_audience") is not None
+            )
 
             # 3. Turn 2: Customer specifies brand vibe / aesthetic
             chunks2 = []
@@ -366,7 +395,10 @@ async def test_guided_intake_end_to_end_flow(customer, session_factory, monkeypa
 
             # Verify business preferences updated with mood and style keywords
             await db.refresh(biz)
-            assert biz.preferences.get("mood") is not None or biz.preferences.get("style_keywords") is not None
+            assert (
+                biz.preferences.get("mood") is not None
+                or biz.preferences.get("style_keywords") is not None
+            )
 
             # 4. Turn 3: Customer confirms launch
             chunks3 = []

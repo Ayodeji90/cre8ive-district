@@ -76,13 +76,9 @@ async def test_verification_token_is_single_use(client):
     assert replayed.json() is None
 
     # A newer link invalidates the previous one for the same email.
-    await client.post(
-        "/api/auth/adapter/verification-tokens", headers=ADAPTER, json=payload
-    )
+    await client.post("/api/auth/adapter/verification-tokens", headers=ADAPTER, json=payload)
     second = {**payload, "token": "second-token"}
-    await client.post(
-        "/api/auth/adapter/verification-tokens", headers=ADAPTER, json=second
-    )
+    await client.post("/api/auth/adapter/verification-tokens", headers=ADAPTER, json=second)
     old = await client.post(
         "/api/auth/adapter/verification-tokens/consume", headers=ADAPTER, json=payload
     )

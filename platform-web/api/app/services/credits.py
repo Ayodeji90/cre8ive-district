@@ -1,6 +1,7 @@
 """Credit balance tracking and ledger transaction management."""
 
 import uuid
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,9 +40,7 @@ async def add_credits(
     if amount <= 0:
         raise ValueError("Amount to add must be positive")
 
-    business = await db.scalar(
-        select(Business).where(Business.id == business_id).with_for_update()
-    )
+    business = await db.scalar(select(Business).where(Business.id == business_id).with_for_update())
     if business is None:
         raise BusinessNotFound(f"Business not found: {business_id}")
 
@@ -82,9 +81,7 @@ async def deduct_credits(
     if amount <= 0:
         raise ValueError("Amount to deduct must be positive")
 
-    business = await db.scalar(
-        select(Business).where(Business.id == business_id).with_for_update()
-    )
+    business = await db.scalar(select(Business).where(Business.id == business_id).with_for_update())
     if business is None:
         raise BusinessNotFound(f"Business not found: {business_id}")
 

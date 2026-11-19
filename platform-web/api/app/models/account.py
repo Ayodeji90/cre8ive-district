@@ -18,9 +18,7 @@ class Account(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "accounts"
     __table_args__ = (
-        UniqueConstraint(
-            "provider", "provider_account_id", name="uq_accounts_provider_account"
-        ),
+        UniqueConstraint("provider", "provider_account_id", name="uq_accounts_provider_account"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(

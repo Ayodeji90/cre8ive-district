@@ -28,9 +28,7 @@ def chat_key(conversation_id: uuid.UUID) -> str:
     return f"chat:{conversation_id}"
 
 
-async def load_context(
-    redis: aioredis.Redis | None, conversation: Conversation
-) -> dict[str, Any]:
+async def load_context(redis: aioredis.Redis | None, conversation: Conversation) -> dict[str, Any]:
     if redis is not None:
         try:
             raw = await redis.get(chat_key(conversation.id))
@@ -132,6 +130,7 @@ async def start_conversation(
             new_biz = Business(
                 name="My Business",
                 slug=f"biz-{uuid.uuid4().hex[:8]}",
+                description=initial_idea.strip() if initial_idea else None,
                 status="onboarding",
                 plan="free",
                 credit_balance=50,
@@ -185,6 +184,7 @@ async def start_conversation(
                 )
                 if conversation.business_id:
                     from app.models.business import Business
+
                     biz = await db.get(Business, conversation.business_id)
                     if biz is not None:
                         if initial_extract.get("business_name"):
@@ -215,6 +215,8 @@ async def start_conversation(
     )
     conversation.status = "active"
     await db.commit()
+    await db.refresh(conversation)
+    await db.refresh(message)
     return conversation, message
 
 
@@ -265,6 +267,7 @@ async def process_message(
         context.update({k: v for k, v in extracted.items() if v is not None})
         if conversation.business_id:
             from app.models.business import Business
+
             business = await db.get(Business, conversation.business_id)
             if business is not None:
                 updated = False
@@ -327,6 +330,18 @@ async def process_message(
                     updated = True
                 if updated:
                     db.add(business)
+                # Auto-create the canonical Project when Business becomes ready
+                if business.status == "ready":
+                    from app.services.project_bridge import get_or_create_project_for_business
+
+                    try:
+                        await get_or_create_project_for_business(db, business)
+                    except Exception:
+                        log.warning(
+                            "project_bridge_failed",
+                            business_id=str(business.id),
+                            exc_info=True,
+                        )
     except Exception:  # extraction failure should never break the chat
         log.warning(
             "context_extraction_failed",
@@ -340,6 +355,7 @@ async def process_message(
 
     if context.get("ready_to_generate") and conversation.business_id:
         from app.services.website_gen import WebsiteGenerationError, queue_website_generation
+
         try:
             result = await queue_website_generation(db, conversation.business_id)
             context["website_job_status"] = result["status"]

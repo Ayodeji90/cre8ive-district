@@ -35,9 +35,7 @@ def require_adapter_secret(
     settings: Settings = Depends(get_settings),
 ) -> None:
     expected = settings.AUTH_ADAPTER_SECRET or settings.JWT_SECRET
-    if not x_auth_adapter_secret or not secrets.compare_digest(
-        x_auth_adapter_secret, expected
-    ):
+    if not x_auth_adapter_secret or not secrets.compare_digest(x_auth_adapter_secret, expected):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid adapter secret"
         )
@@ -55,9 +53,7 @@ def to_adapter_user(user: User) -> AdapterUserResponse:
 
 
 async def find_user_by_email(db: AsyncSession, email: str) -> User | None:
-    return (
-        await db.execute(select(User).where(User.email == email))
-    ).scalar_one_or_none()
+    return (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
 
 
 @router.post(
@@ -87,9 +83,7 @@ async def create_user(payload: AdapterUserCreate, db: AsyncSession = Depends(get
     response_model=AdapterUserResponse | None,
     dependencies=[Depends(require_adapter_secret)],
 )
-async def get_user_by_email(
-    email: str = Query(min_length=3), db: AsyncSession = Depends(get_db)
-):
+async def get_user_by_email(email: str = Query(min_length=3), db: AsyncSession = Depends(get_db)):
     user = await find_user_by_email(db, email)
     return to_adapter_user(user) if user else None
 
@@ -203,9 +197,7 @@ async def create_verification_token(
 ):
     # A new magic link invalidates any earlier outstanding link for this email.
     await db.execute(
-        delete(VerificationToken).where(
-            VerificationToken.identifier == payload.identifier
-        )
+        delete(VerificationToken).where(VerificationToken.identifier == payload.identifier)
     )
     token = VerificationToken(
         identifier=payload.identifier,

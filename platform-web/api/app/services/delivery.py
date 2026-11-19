@@ -39,20 +39,28 @@ async def send_delivery(
         raise DeliveryError("Business not found")
 
     brand = (
-        await db.execute(
-            select(Brand)
-            .where(Brand.business_id == business.id, Brand.status == "approved")
-            .order_by(Brand.version.desc())
-        )
-    ).scalars().first()
-    if brand is None:
-        brand = (
+        (
             await db.execute(
                 select(Brand)
-                .where(Brand.business_id == business.id)
+                .where(Brand.business_id == business.id, Brand.status == "approved")
                 .order_by(Brand.version.desc())
             )
-        ).scalars().first()
+        )
+        .scalars()
+        .first()
+    )
+    if brand is None:
+        brand = (
+            (
+                await db.execute(
+                    select(Brand)
+                    .where(Brand.business_id == business.id)
+                    .order_by(Brand.version.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
     if brand is None or not brand.kit_zip_url:
         raise DeliveryError("Brand kit has not been rendered yet")
 

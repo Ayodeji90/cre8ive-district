@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -25,13 +25,13 @@ class WebsiteJobSuperseded(WebsiteGenerationError):
 
 
 async def queue_website_generation(db: AsyncSession, business_id: uuid.UUID) -> dict[str, Any]:
-    business = await db.scalar(
-        select(Business).where(Business.id == business_id).with_for_update()
-    )
+    business = await db.scalar(select(Business).where(Business.id == business_id).with_for_update())
     if business is None:
         raise WebsiteGenerationError(f"Business not found: {business_id}")
     result = await db.execute(
-        select(Website).where(Website.business_id == business_id).order_by(Website.created_at.desc())
+        select(Website)
+        .where(Website.business_id == business_id)
+        .order_by(Website.created_at.desc())
     )
     website = result.scalars().first()
     if website and website.status == "deployed":
@@ -62,6 +62,7 @@ async def queue_website_generation(db: AsyncSession, business_id: uuid.UUID) -> 
         website.job_token = str(uuid.uuid4())
     await db.commit()
     from app.services.jobs import enqueue_website_job
+
     enqueued = await enqueue_website_job(website.id, website.job_token or str(uuid.uuid4()))
     if not enqueued:
         website.last_error = "Queue unavailable; this saved job will be retried automatically."
@@ -82,7 +83,7 @@ async def reconcile_website_jobs(
     from app.db import async_session_factory
     from app.services.jobs import enqueue_website_job
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     stale_before = now.timestamp() - stale_after_seconds
     queued_before = now.timestamp() - queued_after_seconds
     async with async_session_factory() as db:
@@ -90,13 +91,16 @@ async def reconcile_website_jobs(
             select(Website)
             .where(
                 or_(
-                    and_(Website.status == "queued", Website.updated_at <= datetime.fromtimestamp(queued_before, timezone.utc)),
+                    and_(
+                        Website.status == "queued",
+                        Website.updated_at <= datetime.fromtimestamp(queued_before, UTC),
+                    ),
                     and_(
                         Website.status == "generating",
-                        Website.updated_at <= datetime.fromtimestamp(stale_before, timezone.utc),
+                        Website.updated_at <= datetime.fromtimestamp(stale_before, UTC),
                         or_(
                             Website.last_attempt_at.is_(None),
-                            Website.last_attempt_at <= datetime.fromtimestamp(stale_before, timezone.utc),
+                            Website.last_attempt_at <= datetime.fromtimestamp(stale_before, UTC),
                         ),
                     ),
                 )

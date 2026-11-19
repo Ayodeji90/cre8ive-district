@@ -12,6 +12,7 @@ class WaitlistSignup(UUIDMixin, TimestampMixin, Base):
 
     email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
     source: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
+    business_description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
 
 __all__ = ["WaitlistSignup"]

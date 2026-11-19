@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.models import Business, User, Website
+from app.models import User, Website
 from app.ownership import assert_business_owner
 from app.services import website_gen
 
@@ -55,7 +55,9 @@ async def retry_website_generation(
 ) -> dict[str, Any]:
     await assert_business_owner(db, business_id, user)
     website = await db.scalar(
-        select(Website).where(Website.business_id == business_id).order_by(Website.created_at.desc())
+        select(Website)
+        .where(Website.business_id == business_id)
+        .order_by(Website.created_at.desc())
     )
     if website is None:
         raise HTTPException(status_code=404, detail="No website job exists for this business")

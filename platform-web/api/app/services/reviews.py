@@ -35,9 +35,7 @@ async def create_review(
 ) -> Review:
     if not any((brand_id, order_id, website_id)):
         raise ReviewError("A review needs a brand, website or order")
-    review = Review(
-        brand_id=brand_id, order_id=order_id, website_id=website_id, status="pending"
-    )
+    review = Review(brand_id=brand_id, order_id=order_id, website_id=website_id, status="pending")
     db.add(review)
     await db.commit()
     await db.refresh(review)
@@ -59,9 +57,7 @@ async def list_reviews(
             raise ReviewError(f"Unknown review status: {status}")
         query = query.where(Review.status == status)
 
-    total = (
-        await db.execute(select(func.count()).select_from(query.subquery()))
-    ).scalar_one()
+    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
     rows = (
         await db.execute(
             query.order_by(Review.created_at.desc()).offset((page - 1) * limit).limit(limit)
@@ -123,20 +119,28 @@ async def get_review(db: AsyncSession, review_id: uuid.UUID) -> ReviewDetail:
         business = await db.get(Business, brand.business_id)
 
         conversation = (
-            await db.execute(
-                select(Conversation)
-                .where(Conversation.business_id == brand.business_id)
-                .order_by(Conversation.created_at.desc())
+            (
+                await db.execute(
+                    select(Conversation)
+                    .where(Conversation.business_id == brand.business_id)
+                    .order_by(Conversation.created_at.desc())
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if conversation is not None:
             messages = (
-                await db.execute(
-                    select(Message)
-                    .where(Message.conversation_id == conversation.id)
-                    .order_by(Message.created_at.asc())
+                (
+                    await db.execute(
+                        select(Message)
+                        .where(Message.conversation_id == conversation.id)
+                        .order_by(Message.created_at.asc())
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             conversation_payload = {
                 "id": str(conversation.id),
                 "context": conversation.context,
@@ -184,9 +188,7 @@ async def _load(db: AsyncSession, review_id: uuid.UUID) -> Review:
     return review
 
 
-async def claim_review(
-    db: AsyncSession, review_id: uuid.UUID, reviewer_id: uuid.UUID
-) -> Review:
+async def claim_review(db: AsyncSession, review_id: uuid.UUID, reviewer_id: uuid.UUID) -> Review:
     review = await _load(db, review_id)
     if review.status not in {"pending", "in_progress"}:
         raise ReviewError(f"Cannot claim a review in status '{review.status}'")

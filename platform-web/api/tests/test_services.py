@@ -72,7 +72,9 @@ async def test_render_brand_assets_builds_kit(session_factory, storage, monkeypa
     assert result["logo_urls"] == [{"url": "https://assets.test/logo-1024.png"}]
 
 
-async def test_delivery_marks_order_fulfilled(client, admin, customer, storage, session_factory, monkeypatch):
+async def test_delivery_marks_order_fulfilled(
+    client, admin, customer, storage, session_factory, monkeypatch
+):
     settings = Settings(
         R2_PUBLIC_URL="https://assets.test",
         RESEND_API_KEY="re_test",

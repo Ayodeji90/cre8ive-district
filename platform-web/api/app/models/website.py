@@ -26,7 +26,9 @@ class Website(UUIDMixin, TimestampMixin, Base):
     lighthouse: Mapped[dict[str, Any] | None] = mapped_column(JSONType)
     status: Mapped[str] = mapped_column(String(24), default="generating", nullable=False)
     job_token: Mapped[str | None] = mapped_column(String(36), index=True)
-    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    attempt_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
 

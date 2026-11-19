@@ -19,8 +19,7 @@ os.environ["PAYSTACK_SECRET_KEY"] = "sk_test_webhook"
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import app.models  # noqa: F401
 from app.config import get_settings

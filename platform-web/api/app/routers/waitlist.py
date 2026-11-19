@@ -32,7 +32,11 @@ async def join_waitlist(
     if existing is not None:
         return WaitlistJoinResponse(already_joined=True)
 
-    signup = WaitlistSignup(email=email, source=payload.source.strip().lower() or "unknown")
+    signup = WaitlistSignup(
+        email=email,
+        source=payload.source.strip().lower() or "unknown",
+        business_description=(payload.business_description or "").strip() or None,
+    )
     db.add(signup)
     try:
         await db.commit()

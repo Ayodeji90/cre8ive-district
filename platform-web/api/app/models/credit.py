@@ -21,7 +21,9 @@ class CreditTransaction(UUIDMixin, TimestampMixin, Base):
     )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
-    transaction_type: Mapped[str] = mapped_column(String(32), nullable=False)  # signup_bonus, topup, plan_grant, task_deduction, refund
+    transaction_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # signup_bonus, topup, plan_grant, task_deduction, refund
     description: Mapped[str] = mapped_column(Text, nullable=False)
     reference_id: Mapped[str | None] = mapped_column(String(120), index=True)
 

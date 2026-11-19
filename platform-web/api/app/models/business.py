@@ -36,15 +36,15 @@ class Business(UUIDMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(16), default="onboarding", nullable=False)
     preferences: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict, nullable=False)
 
-    owner: Mapped["User"] = relationship(foreign_keys=[owner_id])  # noqa: F821
+    owner: Mapped[User] = relationship(foreign_keys=[owner_id])  # noqa: F821
 
-    brands: Mapped[list["Brand"]] = relationship(  # noqa: F821
+    brands: Mapped[list[Brand]] = relationship(  # noqa: F821
         back_populates="business", cascade="all, delete-orphan"
     )
-    orders: Mapped[list["Order"]] = relationship(  # noqa: F821
+    orders: Mapped[list[Order]] = relationship(  # noqa: F821
         back_populates="business", cascade="all, delete-orphan"
     )
-    credit_transactions: Mapped[list["CreditTransaction"]] = relationship(
+    credit_transactions: Mapped[list[CreditTransaction]] = relationship(
         back_populates="business", cascade="all, delete-orphan"
     )
 

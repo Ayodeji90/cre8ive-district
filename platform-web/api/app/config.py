@@ -3,11 +3,26 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+def _find_env_file() -> Path:
+    """Find the repo-root .env without assuming a fixed directory depth.
+
+    Locally the package is ``repo/platform-web/api/app``; in a container it is
+    ``/app/app``. Walking the parents to the filesystem root avoids an
+    IndexError in the container, where no .env file exists (environment
+    variables are injected instead).
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / ".env"
+        if candidate.exists():
+            return candidate
+    return Path.cwd() / ".env"
+
+
+ENV_FILE = _find_env_file()
 
 
 class Settings(BaseSettings):
@@ -73,8 +88,14 @@ class Settings(BaseSettings):
                 raise ValueError("DATABASE_URL must point to PostgreSQL in production.")
             if not self.SERVICE_API_KEY:
                 raise ValueError("SERVICE_API_KEY is required in production.")
-            if not self.WEBSITE_AGENT_API_KEY or not self.RUN_ENGINE_API_KEY or not self.BRANDING_AGENT_API_KEY:
-                raise ValueError("Website, run-engine, and branding-agent service keys are required in production.")
+            if (
+                not self.WEBSITE_AGENT_API_KEY
+                or not self.RUN_ENGINE_API_KEY
+                or not self.BRANDING_AGENT_API_KEY
+            ):
+                raise ValueError(
+                    "Website, run-engine, and branding-agent service keys are required in production."
+                )
             if not self.JWT_SECRET or self.JWT_SECRET == "dev-only-secret-change-me":
                 raise ValueError("JWT_SECRET must be explicitly configured in production.")
         return self

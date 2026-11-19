@@ -3,10 +3,10 @@
 Run with: `arq app.worker.WorkerSettings`
 """
 
-import uuid
 import asyncio
 import re
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
 
 import redis.asyncio as aioredis
 from arq.connections import RedisSettings
@@ -22,12 +22,12 @@ from app.services.assets import render_brand_assets
 from app.services.brand_gen import generate_brand
 from app.services.delivery import DeliveryError, send_delivery
 from app.services.jobs import enqueue_asset_render
+from app.services.storage import build_storage
 from app.services.website_gen import (
     WebsiteJobSuperseded,
     generate_and_deploy_for_business,
     reconcile_website_jobs,
 )
-from app.services.storage import build_storage
 
 log = get_logger(__name__)
 WEBSITE_MAX_JOB_ATTEMPTS = 3
@@ -80,14 +80,22 @@ async def generate_website_job(ctx: dict, website_id: str, job_token: str) -> st
             return website.status
         website.status = "generating"
         website.attempt_count += 1
-        website.last_attempt_at = datetime.now(timezone.utc)
+        website.last_attempt_at = datetime.now(UTC)
         website.last_error = None
         await db.commit()
         try:
             business_uuid = website.business_id
-            brands = (await db.execute(
-                select(Brand).where(Brand.business_id == business_uuid).order_by(Brand.created_at.desc())
-            )).scalars().first()
+            brands = (
+                (
+                    await db.execute(
+                        select(Brand)
+                        .where(Brand.business_id == business_uuid)
+                        .order_by(Brand.created_at.desc())
+                    )
+                )
+                .scalars()
+                .first()
+            )
             if brands is None:
                 await generate_brand(db, ctx["ai"], business_uuid, event_bus=ctx["event_bus"])
             result = await generate_and_deploy_for_business(
@@ -110,9 +118,7 @@ async def generate_website_job(ctx: dict, website_id: str, job_token: str) -> st
                     return "deployed"
                 current.last_error = error
                 current.status = (
-                    "failed"
-                    if current.attempt_count >= WEBSITE_MAX_JOB_ATTEMPTS
-                    else "queued"
+                    "failed" if current.attempt_count >= WEBSITE_MAX_JOB_ATTEMPTS else "queued"
                 )
                 await db.commit()
             log.exception(
@@ -165,24 +171,24 @@ async def render_assets_job(ctx: dict, brand_id: str) -> str:
         await render_brand_assets(db, brand, ctx["storage"])
 
         review = (
-            await db.execute(
-                select(Review)
-                .where(Review.brand_id == brand.id, Review.status == "approved")
-                .order_by(Review.created_at.desc())
+            (
+                await db.execute(
+                    select(Review)
+                    .where(Review.brand_id == brand.id, Review.status == "approved")
+                    .order_by(Review.created_at.desc())
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         order_id = review.order_id if review else None
 
     if order_id is not None:
         async with async_session_factory() as db:
             try:
-                await send_delivery(
-                    db, order_id, storage=ctx["storage"], settings=ctx["settings"]
-                )
+                await send_delivery(db, order_id, storage=ctx["storage"], settings=ctx["settings"])
             except DeliveryError:
-                log.warning(
-                    "auto_delivery_failed", order_id=str(order_id), exc_info=True
-                )
+                log.warning("auto_delivery_failed", order_id=str(order_id), exc_info=True)
     return brand_id
 
 

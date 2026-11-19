@@ -1,10 +1,10 @@
-import uuid
 import pytest
+
 from app.models import Business
+from app.schemas.billing import BillingInitializeRequest
 from app.services import credits as credits_service
 from app.services.billing import apply_charge_success, initialize_payment
 from app.services.paystack import PaystackClient
-from app.schemas.billing import BillingInitializeRequest
 from tests.conftest import auth_headers
 
 
@@ -28,7 +28,13 @@ class MockPaystack(PaystackClient):
 @pytest.mark.asyncio
 async def test_credits_add_and_deduct(session_factory, customer):
     async with session_factory() as db:
-        biz = Business(name="Lekki Coffee", slug="lekki-coffee", plan="free", credit_balance=50, owner_id=customer.id)
+        biz = Business(
+            name="Lekki Coffee",
+            slug="lekki-coffee",
+            plan="free",
+            credit_balance=50,
+            owner_id=customer.id,
+        )
         db.add(biz)
         await db.commit()
         await db.refresh(biz)
@@ -56,9 +62,7 @@ async def test_credits_add_and_deduct(session_factory, customer):
 
         # 4. Check insufficient credits raises error
         with pytest.raises(credits_service.InsufficientCreditsError):
-            await credits_service.deduct_credits(
-                db, biz_id, 500, description="Over-budget task"
-            )
+            await credits_service.deduct_credits(db, biz_id, 500, description="Over-budget task")
 
         # 5. Check ledger history
         txs, total = await credits_service.list_transactions(db, biz_id)
@@ -72,7 +76,13 @@ async def test_credits_add_and_deduct(session_factory, customer):
 async def test_credit_pack_payment_grants_credits(session_factory, customer):
     """When a user buys a credit pack, charge.success grants the credits to the business."""
     async with session_factory() as db:
-        biz = Business(name="Nairobi Wear", slug="nairobi-wear", plan="free", credit_balance=25, owner_id=customer.id)
+        biz = Business(
+            name="Nairobi Wear",
+            slug="nairobi-wear",
+            plan="free",
+            credit_balance=25,
+            owner_id=customer.id,
+        )
         db.add(biz)
         await db.commit()
         await db.refresh(biz)
@@ -135,7 +145,11 @@ async def test_billing_credit_api_endpoints(client, customer, session_factory):
     # 2. POST deduct credits
     deduct_res = await client.post(
         f"/api/billing/{biz_id}/credits/deduct",
-        json={"amount": 15, "description": "Social Media Campaign Generation", "reference_id": "run-456"},
+        json={
+            "amount": 15,
+            "description": "Social Media Campaign Generation",
+            "reference_id": "run-456",
+        },
         headers=headers,
     )
     assert deduct_res.status_code == 200

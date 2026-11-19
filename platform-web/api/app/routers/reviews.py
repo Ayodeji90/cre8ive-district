@@ -120,9 +120,7 @@ async def revise_review(
     event_bus: EventBus = Depends(get_event_bus),
 ):
     try:
-        return await review_service.revise_review(
-            db, review_id, payload.notes, event_bus=event_bus
-        )
+        return await review_service.revise_review(db, review_id, payload.notes, event_bus=event_bus)
     except review_service.ReviewError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

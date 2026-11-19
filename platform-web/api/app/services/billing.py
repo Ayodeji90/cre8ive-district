@@ -104,9 +104,11 @@ async def apply_charge_success(
     await refresh_business_plan(db, order.business_id)
 
     from app.services.paystack import PLAN_CREDITS
+
     credits_to_grant = PLAN_CREDITS.get(order.plan, 0)
     if credits_to_grant > 0:
         from app.services import credits as credits_service
+
         try:
             await credits_service.add_credits(
                 db,

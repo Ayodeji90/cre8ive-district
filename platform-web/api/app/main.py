@@ -26,6 +26,7 @@ from app.routers import (
     chat,
     delivery,
     health,
+    projects,
     reviews,
     users,
     waitlist,
@@ -43,9 +44,7 @@ async def lifespan(app: FastAPI):
 
     redis = None
     try:
-        redis = aioredis.from_url(
-            settings.REDIS_URL, encoding="utf-8", decode_responses=True
-        )
+        redis = aioredis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
         await redis.ping()
         app.state.redis = redis
         import app.deps as deps
@@ -149,8 +148,11 @@ api_router.include_router(reviews.admin_router)
 api_router.include_router(assets.router)
 api_router.include_router(agent_runs.router)
 api_router.include_router(delivery.router)
+api_router.include_router(projects.router)
 api_router.include_router(waitlist.router)
 api_router.include_router(websites.router)
+
+
 @api_router.get("/internal/businesses/{business_id}/agent-context")
 async def agent_business_context(
     business_id: uuid.UUID,
@@ -159,18 +161,36 @@ async def agent_business_context(
     if not settings.SERVICE_API_KEY or x_agent_key != settings.SERVICE_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing service key")
     from sqlalchemy import func, select
-    from app.models import Business, Brand, Order, Website
+
     from app.db import async_session_factory
+    from app.models import Brand, Business, Order, Website
+
     async with async_session_factory() as db:
         business = await db.get(Business, business_id)
         if business is None:
             raise HTTPException(status_code=404, detail="Business not found")
-        brand = (await db.execute(
-            select(Brand).where(Brand.business_id == business_id).order_by(Brand.created_at.desc())
-        )).scalars().first()
-        website = (await db.execute(
-            select(Website).where(Website.business_id == business_id).order_by(Website.created_at.desc())
-        )).scalars().first()
+        brand = (
+            (
+                await db.execute(
+                    select(Brand)
+                    .where(Brand.business_id == business_id)
+                    .order_by(Brand.created_at.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        website = (
+            (
+                await db.execute(
+                    select(Website)
+                    .where(Website.business_id == business_id)
+                    .order_by(Website.created_at.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
         paid_order_stats = await db.execute(
             select(func.count(Order.id), func.coalesce(func.sum(Order.amount), 0)).where(
                 Order.business_id == business_id, Order.status == "paid"
@@ -184,8 +204,10 @@ async def agent_business_context(
                 ensure_ascii=False,
             )
         return {
-            "business_id": str(business.id), "business_name": business.name,
-            "business_description": business.description or "", "industry": business.industry or "",
+            "business_id": str(business.id),
+            "business_name": business.name,
+            "business_description": business.description or "",
+            "industry": business.industry or "",
             "target_audience": (business.preferences or {}).get("target_audience", ""),
             "has_brand": bool(brand and brand.status != "failed"),
             "brand_summary": brand_summary,
@@ -196,4 +218,6 @@ async def agent_business_context(
             "total_orders": total_orders,
             "known_competitors": [],
         }
+
+
 app.include_router(api_router)

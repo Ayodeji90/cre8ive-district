@@ -191,8 +191,11 @@ async def deduct_credits_internal(
         raise HTTPException(status_code=401, detail="Invalid or missing service key")
     try:
         balance, tx = await credits_service.deduct_credits(
-            db, business_id, payload.amount,
-            description=payload.description, reference_id=payload.reference_id,
+            db,
+            business_id,
+            payload.amount,
+            description=payload.description,
+            reference_id=payload.reference_id,
         )
     except credits_service.BusinessNotFound as exc:
         raise HTTPException(status_code=404, detail="Business not found") from exc
@@ -201,8 +204,10 @@ async def deduct_credits_internal(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return CreditDeductResponse(
-        business_id=business_id, amount_deducted=payload.amount,
-        new_balance=balance, transaction_id=tx.id,
+        business_id=business_id,
+        amount_deducted=payload.amount,
+        new_balance=balance,
+        transaction_id=tx.id,
     )
 
 

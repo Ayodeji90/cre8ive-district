@@ -26,15 +26,19 @@ async def generate(
     user: User = Depends(get_current_user),
 ) -> Brand:
     # Verify ownership before generating
-    business = await assert_business_owner(db, payload.business_id, user)
+    await assert_business_owner(db, payload.business_id, user)
 
     paid_order = (
-        await db.execute(
-            select(Order).where(
-                Order.business_id == payload.business_id, Order.status == "paid"
+        (
+            await db.execute(
+                select(Order).where(
+                    Order.business_id == payload.business_id, Order.status == "paid"
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if paid_order is None:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -74,12 +78,14 @@ async def get_latest_brand(
     await assert_business_owner(db, business_id, user)
 
     brand = (
-        await db.execute(
-            select(Brand)
-            .where(Brand.business_id == business_id)
-            .order_by(Brand.version.desc())
+        (
+            await db.execute(
+                select(Brand).where(Brand.business_id == business_id).order_by(Brand.version.desc())
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if brand is None:
         raise HTTPException(status_code=404, detail="No brand generated yet")
     return brand

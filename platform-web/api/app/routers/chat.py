@@ -89,6 +89,7 @@ async def chat_socket(
         await websocket.close(code=4401, reason="Authentication required")
         return
     from app.auth import _claim_uuid
+
     ws_user_id = _claim_uuid(claims)
     if ws_user_id is None:
         await websocket.close(code=4401, reason="Authentication required")
@@ -96,6 +97,7 @@ async def chat_socket(
     try:
         async with async_session_factory() as auth_db:
             from app.models import User as _User
+
             ws_user = await auth_db.get(_User, ws_user_id)
         if ws_user is None:
             await websocket.close(code=4401, reason="Authentication required")

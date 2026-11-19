@@ -62,6 +62,57 @@ async def test_health(client):
     assert response.headers["X-Request-ID"]
 
 
+async def test_health_deps_reports_each_dependency(client, monkeypatch):
+    from app.routers import health as health_router
+
+    async def ok_database() -> dict:
+        return {"status": "ok", "latency_ms": 0.1}
+
+    async def ok_redis() -> dict:
+        return {"status": "ok", "latency_ms": 0.1}
+
+    async def ok_http(_client, name, _base_url, _api_key) -> dict:
+        return {"status": "ok", "service": name}
+
+    monkeypatch.setattr(health_router, "_check_database", ok_database)
+    monkeypatch.setattr(health_router, "_check_redis", ok_redis)
+    monkeypatch.setattr(health_router, "_check_http", ok_http)
+
+    response = await client.get("/health/deps")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert set(body["dependencies"]) == {
+        "database",
+        "redis",
+        "branding-agent",
+        "website-agent",
+        "run-engine",
+    }
+
+
+async def test_health_deps_is_503_when_a_dependency_is_down(client, monkeypatch):
+    from app.routers import health as health_router
+
+    async def ok_database() -> dict:
+        return {"status": "ok"}
+
+    async def broken_redis() -> dict:
+        return {"status": "error", "error": "connection refused"}
+
+    async def ok_http(_client, name, _base_url, _api_key) -> dict:
+        return {"status": "ok", "service": name}
+
+    monkeypatch.setattr(health_router, "_check_database", ok_database)
+    monkeypatch.setattr(health_router, "_check_redis", broken_redis)
+    monkeypatch.setattr(health_router, "_check_http", ok_http)
+
+    response = await client.get("/health/deps")
+    assert response.status_code == 503
+    assert response.json()["status"] == "degraded"
+    assert response.json()["dependencies"]["redis"]["status"] == "error"
+
+
 async def test_me_requires_token(client):
     response = await client.get("/api/me")
     assert response.status_code == 401
@@ -280,9 +331,11 @@ async def test_paystack_webhook_is_signed_and_idempotent(client, customer, sessi
         reference = str(order.id)
 
     payload = json.dumps({"event": "charge.success", "data": {"reference": reference}}).encode()
-    signature = __import__("hmac").new(
-        settings.PAYSTACK_SECRET_KEY.encode(), payload, __import__("hashlib").sha512
-    ).hexdigest()
+    signature = (
+        __import__("hmac")
+        .new(settings.PAYSTACK_SECRET_KEY.encode(), payload, __import__("hashlib").sha512)
+        .hexdigest()
+    )
     assert verify_webhook_signature(payload, signature, settings.PAYSTACK_SECRET_KEY)
 
     app.dependency_overrides[get_app_settings] = lambda: settings
@@ -380,9 +433,7 @@ async def test_review_workflow(client, customer, admin, session_factory):
     forbidden = await client.get("/api/admin/reviews", headers=headers)
     assert forbidden.status_code == 403
 
-    listing = await client.get(
-        "/api/admin/reviews?status=pending", headers=admin_headers
-    )
+    listing = await client.get("/api/admin/reviews?status=pending", headers=admin_headers)
     assert listing.status_code == 200
     assert listing.json()["total"] == 1
     assert listing.json()["items"][0]["business_name"] == "Lagos Threads"
@@ -391,16 +442,12 @@ async def test_review_workflow(client, customer, admin, session_factory):
     assert detail.status_code == 200
     assert detail.json()["brand"]["strategy"]["tagline"] == "Wear your story"
 
-    claimed = await client.post(
-        f"/api/admin/reviews/{review_id}/claim", headers=admin_headers
-    )
+    claimed = await client.post(f"/api/admin/reviews/{review_id}/claim", headers=admin_headers)
     assert claimed.status_code == 200
     assert claimed.json()["status"] == "in_progress"
     assert claimed.json()["reviewer_id"] == str(admin.id)
 
-    approved = await client.post(
-        f"/api/admin/reviews/{review_id}/approve", headers=admin_headers
-    )
+    approved = await client.post(f"/api/admin/reviews/{review_id}/approve", headers=admin_headers)
     assert approved.status_code == 200
     assert approved.json()["status"] == "approved"
 
@@ -434,9 +481,7 @@ async def test_asset_download_uses_signed_url(client, admin, customer, storage, 
 
     app.dependency_overrides[get_storage] = lambda: storage
     try:
-        response = await client.get(
-            f"/api/assets/{brand_id}/download", headers=auth_headers(admin)
-        )
+        response = await client.get(f"/api/assets/{brand_id}/download", headers=auth_headers(admin))
     finally:
         app.dependency_overrides.pop(get_storage, None)
 
@@ -477,9 +522,7 @@ async def test_customer_can_access_own_assets_but_not_another_business(
 
     app.dependency_overrides[get_storage] = lambda: storage
     try:
-        owned = await client.get(
-            f"/api/assets/{brand_id}/download", headers=auth_headers(customer)
-        )
+        owned = await client.get(f"/api/assets/{brand_id}/download", headers=auth_headers(customer))
         foreign = await client.get(
             f"/api/assets/{brand_id}/files", headers=auth_headers(other_customer)
         )

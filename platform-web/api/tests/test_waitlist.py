@@ -82,9 +82,7 @@ async def test_join_waitlist_sends_confirmation_email(client):
 
 @respx.mock
 async def test_signup_is_kept_when_email_fails(client, session_factory):
-    respx.post("https://api.resend.com/emails").mock(
-        return_value=Response(500, text="resend down")
-    )
+    respx.post("https://api.resend.com/emails").mock(return_value=Response(500, text="resend down"))
     app.dependency_overrides[get_app_settings] = lambda: Settings(
         RESEND_API_KEY="re_test",
         EMAIL_FROM="Cre8ive District <brands@example.com>",

@@ -69,8 +69,7 @@ async def generate_brand(
         version=version,
         strategy=strategy.model_dump(),
         logo_urls=[
-            {"url": url, "size": "1024x1024", "format": url.rsplit(".", 1)[-1]}
-            for url in logo_urls
+            {"url": url, "size": "1024x1024", "format": url.rsplit(".", 1)[-1]} for url in logo_urls
         ],
         colors=palette.model_dump(),
         fonts=fonts.model_dump(),

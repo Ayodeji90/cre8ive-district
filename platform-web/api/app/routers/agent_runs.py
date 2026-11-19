@@ -26,6 +26,7 @@ class StartRunRequest(BaseModel):
 
 async def _assert_owner(db: AsyncSession, business_id: uuid.UUID, user_id: uuid.UUID) -> None:
     from app.models import Business
+
     business = await db.get(Business, business_id)
     if business is None:
         raise HTTPException(status_code=404, detail="Business not found")
@@ -36,7 +37,9 @@ async def _assert_owner(db: AsyncSession, business_id: uuid.UUID, user_id: uuid.
 def _service_headers() -> dict[str, str]:
     settings = get_settings()
     if not settings.RUN_ENGINE_API_KEY:
-        raise HTTPException(status_code=503, detail="Run engine service authentication is not configured")
+        raise HTTPException(
+            status_code=503, detail="Run engine service authentication is not configured"
+        )
     return {"X-Agent-Key": settings.RUN_ENGINE_API_KEY}
 
 
@@ -71,14 +74,25 @@ async def start_run(
         raise HTTPException(status_code=404, detail="Business not found")
     budget = min(payload.credits_budget or business.credit_balance, business.credit_balance)
     if budget < 1:
-        raise HTTPException(status_code=402, detail="No credits are available for an autonomous run")
+        raise HTTPException(
+            status_code=402, detail="No credits are available for an autonomous run"
+        )
     settings = get_settings()
     body = payload.model_dump(mode="json")
     body.update(user_id=str(user.id), credits_budget=budget)
-    body["permissions"] = {name: "ask_first" for name in (
-        "website", "social_instagram", "social_facebook", "social_linkedin",
-        "social_x", "social_tiktok", "outreach_email", "content",
-    )}
+    body["permissions"] = {
+        name: "ask_first"
+        for name in (
+            "website",
+            "social_instagram",
+            "social_facebook",
+            "social_linkedin",
+            "social_x",
+            "social_tiktok",
+            "outreach_email",
+            "content",
+        )
+    }
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
@@ -140,16 +154,22 @@ async def stream_run_events(
     async def relay():
         async with httpx.AsyncClient(timeout=None) as client:
             async with client.stream(
-                "GET", f"{settings.RUN_ENGINE_URL}/v1/runs/{run_id}/events/stream",
+                "GET",
+                f"{settings.RUN_ENGINE_URL}/v1/runs/{run_id}/events/stream",
                 headers=_service_headers(),
             ) as response:
                 response.raise_for_status()
                 async for chunk in response.aiter_text():
                     yield chunk
 
-    return StreamingResponse(relay(), media_type="text/event-stream", headers={
-        "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-    })
+    return StreamingResponse(
+        relay(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 async def _set_task_decision(

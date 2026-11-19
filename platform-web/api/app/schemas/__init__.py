@@ -37,6 +37,25 @@ from app.schemas.conversation import (
 )
 from app.schemas.delivery import DeliveryRequest, DeliveryResponse
 from app.schemas.order import OrderResponse
+from app.schemas.project import (
+    AgentRunCreate,
+    AgentRunResponse,
+    ApprovalDecision,
+    ApprovalItemResponse,
+    BrandKitResponse,
+    BrandKitUpdate,
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+    RunEventResponse,
+    SiteBuildCreate,
+    SiteBuildResponse,
+)
+from app.schemas.project_review import (
+    ProjectReviewCreate,
+    ProjectReviewDecision,
+    ProjectReviewResponse,
+)
 from app.schemas.review import (
     RejectRequest,
     ReviewCreate,
@@ -49,10 +68,16 @@ from app.schemas.user import MeResponse, UserCreate, UserResponse, UserUpdate
 from app.schemas.waitlist import WaitlistJoinRequest, WaitlistJoinResponse
 
 __all__ = [
+    "AgentRunCreate",
+    "AgentRunResponse",
+    "ApprovalDecision",
+    "ApprovalItemResponse",
     "BrandAssetFiles",
     "BrandBriefExtract",
     "BrandCopy",
     "BrandGenerateRequest",
+    "BrandKitResponse",
+    "BrandKitUpdate",
     "BrandResponse",
     "BrandStrategy",
     "BusinessCreate",
@@ -80,6 +105,12 @@ __all__ = [
     "OrderResponse",
     "Page",
     "PaletteResult",
+    "ProjectCreate",
+    "ProjectResponse",
+    "ProjectReviewCreate",
+    "ProjectReviewDecision",
+    "ProjectReviewResponse",
+    "ProjectUpdate",
     "RejectRequest",
     "RenderResponse",
     "ReviewCreate",
@@ -87,6 +118,9 @@ __all__ = [
     "ReviewListItem",
     "ReviewResponse",
     "RevisionRequest",
+    "RunEventResponse",
+    "SiteBuildCreate",
+    "SiteBuildResponse",
     "UserCreate",
     "UserResponse",
     "UserUpdate",
