@@ -4,6 +4,7 @@ node_modules/
 .next/
 .turbo/
 .local-bin/
+.dev-logs/
 dist/
 coverage/
 # Local signup fallback written before waitlist storage moved to the API.

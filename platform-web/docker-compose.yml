@@ -1,3 +1,17 @@
+# Local development stack.
+#
+# Startup order is explicit so a broken dependency fails loudly instead of
+# producing a half-started stack:
+#   postgres/redis -> migrate -> {api, worker} -> agents
+# Run `make status` for a per-service health table and `make doctor` for
+# dependency-level diagnosis (including the config checks behind chat start).
+
+x-python-healthcheck: &python-healthcheck
+  interval: 10s
+  timeout: 3s
+  retries: 6
+  start_period: 30s
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,6 +28,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -24,6 +39,26 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+
+  # One-shot migration gate. api and worker only start after this succeeds,
+  # so a failed migration stops the stack instead of serving a stale schema.
+  migrate:
+    build: ./api
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
+      REDIS_URL: redis://redis:6379
+      ENV: ${ENV:-development}
+    command: alembic upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./api:/app
+    restart: "no"
 
   branding-agent:
     build: ./services/branding-agent
@@ -36,6 +71,14 @@ services:
       SERVICE_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
     ports:
       - "8001:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+      <<: *python-healthcheck
+    restart: unless-stopped
 
   website-agent:
     build: ./services/website-agent
@@ -46,7 +89,7 @@ services:
       ENV: ${ENV:-development}
       DATABASE_URL: postgresql+asyncpg://cre8ive:localdev@postgres:5432/cre8ive
       USE_IN_MEMORY_REPO: "false"
-      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      SERVICE_API_KEY: ${WEBSITE_AGENT_API_KEY:-local-development-key}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       VERCEL_TOKEN: ${VERCEL_TOKEN:-}
       AI_STUB: ${AI_STUB:-true}
@@ -56,6 +99,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+      <<: *python-healthcheck
+    restart: unless-stopped
 
   run-engine:
     build: ./services/run-engine
@@ -69,9 +120,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       USE_IN_MEMORY_REPO: "false"
       USE_IN_MEMORY_EVENTS: "false"
-      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      SERVICE_API_KEY: ${RUN_ENGINE_API_KEY:-local-development-key}
       PLATFORM_API_KEY: ${SERVICE_API_KEY:-local-development-key}
       PLATFORM_API_URL: http://api:8000
+      BRANDING_AGENT_URL: http://branding-agent:8000
+      WEBSITE_AGENT_URL: http://website-agent:8000
     ports:
       - "8003:8002"
     depends_on:
@@ -79,6 +132,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=2)"
+      <<: *python-healthcheck
+    restart: unless-stopped
 
   api:
     build: ./api
@@ -91,26 +152,37 @@ services:
       BRANDING_AGENT_URL: http://branding-agent:8000
       BRANDING_AGENT_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
       RUN_ENGINE_URL: http://run-engine:8002
-      RUN_ENGINE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      RUN_ENGINE_API_KEY: ${RUN_ENGINE_API_KEY:-local-development-key}
       WEBSITE_AGENT_URL: http://website-agent:8000
-      WEBSITE_AGENT_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      WEBSITE_AGENT_API_KEY: ${WEBSITE_AGENT_API_KEY:-local-development-key}
       SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      ENV: ${ENV:-development}
     ports:
       - "8000:8000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       branding-agent:
-        condition: service_started
+        condition: service_healthy
       website-agent:
-        condition: service_started
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+        condition: service_healthy
+      run-engine:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./api:/app
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/db', timeout=2)"
+      <<: *python-healthcheck
+    restart: unless-stopped
 
   worker:
     build: ./api
@@ -123,20 +195,24 @@ services:
       BRANDING_AGENT_URL: http://branding-agent:8000
       BRANDING_AGENT_API_KEY: ${BRANDING_AGENT_API_KEY:-local-development-key}
       WEBSITE_AGENT_URL: http://website-agent:8000
-      WEBSITE_AGENT_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      WEBSITE_AGENT_API_KEY: ${WEBSITE_AGENT_API_KEY:-local-development-key}
       SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
+      ENV: ${ENV:-development}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       branding-agent:
-        condition: service_started
+        condition: service_healthy
       website-agent:
-        condition: service_started
+        condition: service_healthy
     command: arq app.worker.WorkerSettings
     volumes:
       - ./api:/app
+    restart: unless-stopped
 
 volumes:
   postgres_data:

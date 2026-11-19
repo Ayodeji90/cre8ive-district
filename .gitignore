@@ -3,3 +3,5 @@
 .env
 .env.*
 !.env.example
+# Repomix dump of the repository; generated locally, never committed.
+codebase.md
