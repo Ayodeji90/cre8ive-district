@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
@@ -35,7 +36,9 @@ class Settings(BaseSettings):
             if not self.VERCEL_TOKEN:
                 raise ValueError("VERCEL_TOKEN is required in production.")
             if self.USE_IN_MEMORY_REPO:
-                raise ValueError("USE_IN_MEMORY_REPO must be False in production (PostgreSQL required).")
+                raise ValueError(
+                    "USE_IN_MEMORY_REPO must be False in production (PostgreSQL required)."
+                )
             if not self.SERVICE_API_KEY:
                 raise ValueError("SERVICE_API_KEY is required in production.")
             if not self.DATABASE_URL.startswith(("postgresql://", "postgresql+asyncpg://")):

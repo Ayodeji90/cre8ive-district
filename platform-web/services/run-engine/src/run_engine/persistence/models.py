@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -32,10 +33,10 @@ class RunModel(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    tasks: Mapped[list["RunTaskModel"]] = relationship(
+    tasks: Mapped[list[RunTaskModel]] = relationship(
         "RunTaskModel", back_populates="run", cascade="all, delete-orphan"
     )
-    events: Mapped[list["RunEventModel"]] = relationship(
+    events: Mapped[list[RunEventModel]] = relationship(
         "RunEventModel", back_populates="run", cascade="all, delete-orphan"
     )
 
@@ -65,7 +66,7 @@ class RunTaskModel(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    run: Mapped["RunModel"] = relationship("RunModel", back_populates="tasks")
+    run: Mapped[RunModel] = relationship("RunModel", back_populates="tasks")
 
 
 class RunEventModel(Base):
@@ -83,4 +84,4 @@ class RunEventModel(Base):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    run: Mapped["RunModel"] = relationship("RunModel", back_populates="events")
+    run: Mapped[RunModel] = relationship("RunModel", back_populates="events")

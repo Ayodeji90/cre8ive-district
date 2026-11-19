@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
+import redis.asyncio as aioredis
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -16,10 +17,9 @@ from run_engine.domain.run import (
     CreditBudget,
     Run,
     RunEvent,
-    RunStatus,
     RunTask,
+    TaskStatus,
 )
-import redis.asyncio as aioredis
 from run_engine.events.publisher import InMemoryEventPublisher, RedisEventPublisher
 from run_engine.logging import configure_logging, get_logger
 from run_engine.orchestrator.briefer import format_brief_summary
@@ -35,9 +35,15 @@ logger = get_logger("run_engine.api")
 
 # --- Global singletons for runtime ---
 settings = get_settings()
-repository = PostgresRunRepository(settings.DATABASE_URL) if not settings.USE_IN_MEMORY_REPO else InMemoryRunRepository()
+repository = (
+    PostgresRunRepository(settings.DATABASE_URL)
+    if not settings.USE_IN_MEMORY_REPO
+    else InMemoryRunRepository()
+)
 redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-event_publisher = InMemoryEventPublisher() if settings.USE_IN_MEMORY_EVENTS else RedisEventPublisher(redis_client)
+event_publisher = (
+    InMemoryEventPublisher() if settings.USE_IN_MEMORY_EVENTS else RedisEventPublisher(redis_client)
+)
 llm = create_planner_llm(settings)
 planner = TaskPlanner(llm)
 executor = TaskExecutor(llm=llm if not settings.AI_STUB else None)
@@ -46,7 +52,9 @@ loop_engine = AgentLoop(
     executor=executor,
     repository=repository,
     event_publisher=event_publisher,
-    context_gatherer=SimpleContextGatherer() if settings.AI_STUB else PlatformContextGatherer(settings.PLATFORM_API_URL, settings.PLATFORM_API_KEY),
+    context_gatherer=SimpleContextGatherer()
+    if settings.AI_STUB
+    else PlatformContextGatherer(settings.PLATFORM_API_URL, settings.PLATFORM_API_KEY),
     iteration_delay=settings.ITERATION_DELAY_SECONDS,
     approval_timeout=settings.APPROVAL_TIMEOUT_SECONDS,
     brief_interval_hours=settings.BRIEF_INTERVAL_HOURS,
@@ -54,7 +62,7 @@ loop_engine = AgentLoop(
 
 
 async def require_service_key(
-    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key")
+    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key"),
 ) -> None:
     if settings.ENV == "production" or settings.SERVICE_API_KEY:
         if not x_agent_key or x_agent_key != settings.SERVICE_API_KEY:
@@ -103,6 +111,7 @@ app.add_middleware(
 
 # --- Schemas ---
 
+
 class CreateRunRequest(BaseModel):
     business_id: UUID
     user_id: UUID
@@ -117,6 +126,7 @@ class TaskApprovalRequest(BaseModel):
 
 
 # --- Endpoints ---
+
 
 @app.get("/health")
 async def health_check():
@@ -133,17 +143,29 @@ async def ready_check():
     if not settings.USE_IN_MEMORY_REPO:
         try:
             from sqlalchemy import text
+
             async with repository._session_factory() as session:
                 await session.execute(text("SELECT 1"))
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Database unreachable: {exc}",
-            )
+            ) from exc
     return {"status": "ready", "service": settings.SERVICE_NAME}
 
 
-@app.post("/v1/runs", status_code=status.HTTP_201_CREATED, response_model=Run, dependencies=[Depends(require_service_key)])
+@app.get("/v1/ping", dependencies=[Depends(require_service_key)])
+async def ping():
+    """Authenticated liveness probe: proves reachability and key agreement."""
+    return {"status": "ok", "service": settings.SERVICE_NAME}
+
+
+@app.post(
+    "/v1/runs",
+    status_code=status.HTTP_201_CREATED,
+    response_model=Run,
+    dependencies=[Depends(require_service_key)],
+)
 async def start_run(payload: CreateRunRequest):
     run = Run(
         business_id=payload.business_id,
@@ -193,7 +215,11 @@ async def cancel_run(run_id: UUID):
     return {"status": "cancelled", "run_id": str(run_id)}
 
 
-@app.get("/v1/runs/{run_id}/tasks/pending", response_model=list[RunTask], dependencies=[Depends(require_service_key)])
+@app.get(
+    "/v1/runs/{run_id}/tasks/pending",
+    response_model=list[RunTask],
+    dependencies=[Depends(require_service_key)],
+)
 async def get_pending_tasks(run_id: UUID):
     tasks = await repository.get_pending_approval_tasks(run_id)
     return tasks
@@ -209,7 +235,11 @@ async def approve_task(run_id: UUID, task_id: UUID):
     task.status = TaskStatus.APPROVED
     await repository.update_task(task)
     accepted = await loop_engine.approve_task(task_id, approved=True)
-    return {"approved": True, "task_id": str(task_id), "unblocked": accepted or not loop_engine.is_running(run_id)}
+    return {
+        "approved": True,
+        "task_id": str(task_id),
+        "unblocked": accepted or not loop_engine.is_running(run_id),
+    }
 
 
 @app.post("/v1/runs/{run_id}/tasks/{task_id}/reject", dependencies=[Depends(require_service_key)])
@@ -222,10 +252,18 @@ async def reject_task(run_id: UUID, task_id: UUID, body: TaskApprovalRequest | N
     task.status = TaskStatus.REJECTED
     await repository.update_task(task)
     accepted = await loop_engine.approve_task(task_id, approved=False)
-    return {"approved": False, "task_id": str(task_id), "unblocked": accepted or not loop_engine.is_running(run_id)}
+    return {
+        "approved": False,
+        "task_id": str(task_id),
+        "unblocked": accepted or not loop_engine.is_running(run_id),
+    }
 
 
-@app.get("/v1/runs/{run_id}/events", response_model=list[RunEvent], dependencies=[Depends(require_service_key)])
+@app.get(
+    "/v1/runs/{run_id}/events",
+    response_model=list[RunEvent],
+    dependencies=[Depends(require_service_key)],
+)
 async def list_events(run_id: UUID):
     events = await repository.get_events(run_id)
     return events

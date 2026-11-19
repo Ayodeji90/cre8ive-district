@@ -19,8 +19,4 @@ def estimate_cost(task_type: TaskType) -> int:
 
 
 def affordable_task_types(budget: CreditBudget) -> list[TaskType]:
-    return [
-        task_type
-        for task_type, cost in CREDIT_COSTS.items()
-        if budget.can_afford(cost)
-    ]
+    return [task_type for task_type, cost in CREDIT_COSTS.items() if budget.can_afford(cost)]

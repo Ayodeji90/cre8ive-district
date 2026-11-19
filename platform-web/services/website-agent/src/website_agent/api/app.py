@@ -57,8 +57,12 @@ app.add_middleware(
 )
 
 # Services
-copy_client = None if settings.AI_STUB else OpenRouterWebsiteCopyClient(
-    settings.OPENROUTER_API_KEY, settings.OPENROUTER_API_BASE, settings.WEBSITE_MODEL
+copy_client = (
+    None
+    if settings.AI_STUB
+    else OpenRouterWebsiteCopyClient(
+        settings.OPENROUTER_API_KEY, settings.OPENROUTER_API_BASE, settings.WEBSITE_MODEL
+    )
 )
 generator = ContentGenerator(stub_mode=settings.AI_STUB, llm_client=copy_client)
 assembler = LayoutAssembler()
@@ -71,7 +75,7 @@ _generated_files: dict[UUID, dict[str, str]] = {}
 
 
 async def require_service_key(
-    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key")
+    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key"),
 ) -> None:
     if settings.ENV == "production" or settings.SERVICE_API_KEY:
         if not x_agent_key or x_agent_key != settings.SERVICE_API_KEY:
@@ -96,6 +100,12 @@ async def health() -> dict[str, Any]:
     }
 
 
+@app.get("/v1/ping", tags=["health"], dependencies=[Depends(require_service_key)])
+async def ping() -> dict[str, Any]:
+    """Authenticated liveness probe: proves reachability and key agreement."""
+    return {"status": "ok", "service": settings.SERVICE_NAME}
+
+
 @app.get("/ready", tags=["health"])
 async def ready() -> dict[str, Any]:
     if site_repo:
@@ -108,7 +118,7 @@ async def ready() -> dict[str, Any]:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Database unreachable: {exc}",
-            )
+            ) from exc
     return {"status": "ready", "service": settings.SERVICE_NAME}
 
 
@@ -275,7 +285,9 @@ async def preview_page(site_id: UUID, page_slug: str) -> HTMLResponse:
     return HTMLResponse(content=content)
 
 
-@app.get("/v1/websites/{site_id}/files", tags=["websites"], dependencies=[Depends(require_service_key)])
+@app.get(
+    "/v1/websites/{site_id}/files", tags=["websites"], dependencies=[Depends(require_service_key)]
+)
 async def list_files(site_id: UUID) -> dict[str, list[str]]:
     files = _generated_files.get(site_id)
     if not files and site_repo:

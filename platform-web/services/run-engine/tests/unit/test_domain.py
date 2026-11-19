@@ -1,9 +1,9 @@
 from uuid import uuid4
+
 import pytest
+
 from run_engine.domain.credits import (
-    CREDIT_COSTS,
     affordable_task_types,
-    estimate_cost,
 )
 from run_engine.domain.permissions import needs_approval, task_channel
 from run_engine.domain.run import (

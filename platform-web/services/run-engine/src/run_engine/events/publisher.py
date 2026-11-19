@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
-from typing import AsyncIterator, Protocol
+from collections.abc import AsyncIterator
+from typing import Protocol
 from uuid import UUID
 
 import redis.asyncio as aioredis
+
 from run_engine.domain.run import RunEvent
 
 
@@ -43,6 +44,7 @@ class InMemoryEventPublisher:
 
 class RedisEventPublisher:
     """Cross-process event fanout for SSE clients and run workers."""
+
     def __init__(self, redis: aioredis.Redis) -> None:
         self._redis = redis
 

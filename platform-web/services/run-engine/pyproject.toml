@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "run-engine"
@@ -25,7 +25,7 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "aiosqlite>=0.20",
-    "ruff>=0.7"
+    "ruff==0.16.0"
 ]
 
 [tool.pytest.ini_options]
@@ -34,7 +34,16 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
-line-length = 99
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
+# E501: the formatter owns line wrapping; long strings/URLs are unavoidable.
+# UP042: StrEnum migration changes enum serialization semantics; opt in deliberately.
+ignore = ["B008", "E501", "UP042"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

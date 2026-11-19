@@ -4,7 +4,21 @@ from pathlib import Path
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ENV_FILE = Path(__file__).resolve().parents[5] / ".env"
+
+def _find_env_file() -> Path:
+    """Find the repo-root .env without assuming a fixed directory depth.
+
+    Works for both the source tree and an installed package inside a
+    container, where no .env exists and settings come from the environment.
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / ".env"
+        if candidate.exists():
+            return candidate
+    return Path.cwd() / ".env"
+
+
+ENV_FILE = _find_env_file()
 
 
 class Settings(BaseSettings):

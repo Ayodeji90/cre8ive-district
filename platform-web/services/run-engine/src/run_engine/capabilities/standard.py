@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 from run_engine.domain.run import BusinessContext, RunTask
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,9 @@ class BrandImprovementCapability:
 class WebsiteImprovementCapability:
     async def execute(self, task: RunTask, context: BusinessContext) -> dict:
         section = task.input_data.get("section", "hero")
-        logger.info("Executing website improvement for %s (section: %s)", context.business_name, section)
+        logger.info(
+            "Executing website improvement for %s (section: %s)", context.business_name, section
+        )
         return {
             "section": section,
             "optimized_headline": f"Build and scale your {context.industry or 'business'} faster with {context.business_name}",
@@ -45,7 +48,9 @@ class SocialPostCapability:
     async def execute(self, task: RunTask, context: BusinessContext) -> dict:
         platform = task.input_data.get("platform", "instagram")
         format_type = task.input_data.get("format", "single_image")
-        logger.info("Drafting social post for %s on %s (%s)", context.business_name, platform, format_type)
+        logger.info(
+            "Drafting social post for %s on %s (%s)", context.business_name, platform, format_type
+        )
         return {
             "platform": platform,
             "format": format_type,
@@ -65,7 +70,9 @@ class SocialPostCapability:
 class OutreachEmailCapability:
     async def execute(self, task: RunTask, context: BusinessContext) -> dict:
         target = task.input_data.get("target_segment", "prospective partners")
-        logger.info("Drafting cold outreach email for %s targeting %s", context.business_name, target)
+        logger.info(
+            "Drafting cold outreach email for %s targeting %s", context.business_name, target
+        )
         return {
             "target_segment": target,
             "subject": f"Quick question regarding your creative & growth needs — {context.business_name}",
@@ -111,7 +118,11 @@ class ContentCreationCapability:
             "topic": topic,
             "article_title": f"The Modern Guide to Thriving in {context.industry or 'Business'}",
             "summary": "Key insights on brand positioning, digital distribution, and customer trust.",
-            "sections": ["1. Identifying Your Edge", "2. Building Consistency", "3. Converting Visitors"],
+            "sections": [
+                "1. Identifying Your Edge",
+                "2. Building Consistency",
+                "3. Converting Visitors",
+            ],
         }
 
     async def deliver(self, task: RunTask, result: dict) -> None:
@@ -121,13 +132,17 @@ class ContentCreationCapability:
 class SEOOptimizationCapability:
     async def execute(self, task: RunTask, context: BusinessContext) -> dict:
         return {
-            "keywords": [f"{context.business_name}", f"best {context.industry}", "Lagos digital brand agency"],
+            "keywords": [
+                f"{context.business_name}",
+                f"best {context.industry}",
+                "Lagos digital brand agency",
+            ],
             "meta_description": f"Discover {context.business_name}: innovative branding, digital presence, and high-impact strategy.",
             "title_tag": f"{context.business_name} | Modern Digital Brand Solutions",
         }
 
     async def deliver(self, task: RunTask, result: dict) -> None:
-        logger.info("Updated SEO metadata for %s", context.website_url)
+        logger.info("Updated SEO metadata for task %s", task.id)
 
 
 class AnalyticsReviewCapability:

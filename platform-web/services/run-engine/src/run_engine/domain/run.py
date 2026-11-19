@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
+
 from pydantic import BaseModel, Field
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class RunStatus(str, enum.Enum):
@@ -108,6 +109,7 @@ class CreditBudget(BaseModel):
 
 class BusinessContext(BaseModel):
     """Snapshot of a business's current state for the planner."""
+
     business_id: UUID
     business_name: str
     business_description: str

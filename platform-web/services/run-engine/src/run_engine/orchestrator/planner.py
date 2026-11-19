@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Protocol
 
 from run_engine.domain.credits import CREDIT_COSTS, affordable_task_types
 from run_engine.domain.run import (
@@ -100,14 +99,16 @@ class TaskPlanner:
             return []
 
         available_actions = "\n".join(
-            f"- {t.value}: {CREDIT_COSTS.get(t, 5)} credits"
-            for t in affordable
+            f"- {t.value}: {CREDIT_COSTS.get(t, 5)} credits" for t in affordable
         )
 
-        action_history = "\n".join(
-            f"- [{t.task_type.value}] {t.title} → {t.status.value}"
-            for t in completed_tasks[-20:]
-        ) or "None yet — this is the first iteration."
+        action_history = (
+            "\n".join(
+                f"- [{t.task_type.value}] {t.title} → {t.status.value}"
+                for t in completed_tasks[-20:]
+            )
+            or "None yet — this is the first iteration."
+        )
 
         brand_status = "✅ Complete" if context.has_brand else "❌ Not created"
         website_status = (
@@ -135,7 +136,8 @@ class TaskPlanner:
             action_history=action_history,
             remaining_credits=run.budget.remaining,
             available_actions=available_actions,
-            goal=run.goal or "Grow this business — improve brand, reach customers, generate revenue.",
+            goal=run.goal
+            or "Grow this business — improve brand, reach customers, generate revenue.",
         )
 
         messages = [
@@ -189,9 +191,10 @@ class TaskPlanner:
         failed = [t for t in run.tasks if t.status == TaskStatus.FAILED]
         rejected = [t for t in run.tasks if t.status == TaskStatus.REJECTED]
 
-        completed_summary = "\n".join(
-            f"- {t.title}: {t.description}" for t in completed[-10:]
-        ) or "No completed tasks yet."
+        completed_summary = (
+            "\n".join(f"- {t.title}: {t.description}" for t in completed[-10:])
+            or "No completed tasks yet."
+        )
 
         prompt = f"""Generate a concise executive brief for the business owner.
 

@@ -81,12 +81,15 @@ class TaskExecutor:
                 )
                 resp.raise_for_status()
         except Exception as exc:
-            logger.warning("credit_deduction_failed", extra={"task_id": str(task.id)}, exc_info=True)
+            logger.warning(
+                "credit_deduction_failed", extra={"task_id": str(task.id)}, exc_info=True
+            )
             raise RuntimeError("Could not deduct credits for the completed run task") from exc
 
 
 class LLMArtifactCapability:
     """Generate a reviewable artifact based on actual business/task data."""
+
     def __init__(self, llm) -> None:
         self._llm = llm
 

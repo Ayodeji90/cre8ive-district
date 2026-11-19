@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
@@ -44,9 +45,13 @@ class Settings(BaseSettings):
             if not self.OPENROUTER_API_KEY:
                 raise ValueError("OPENROUTER_API_KEY is required in production.")
             if self.USE_IN_MEMORY_REPO:
-                raise ValueError("USE_IN_MEMORY_REPO must be False in production (PostgreSQL required).")
+                raise ValueError(
+                    "USE_IN_MEMORY_REPO must be False in production (PostgreSQL required)."
+                )
             if self.USE_IN_MEMORY_EVENTS:
-                raise ValueError("USE_IN_MEMORY_EVENTS must be False in production (Redis pub/sub required).")
+                raise ValueError(
+                    "USE_IN_MEMORY_EVENTS must be False in production (Redis pub/sub required)."
+                )
             if not self.DATABASE_URL.startswith(("postgresql://", "postgresql+asyncpg://")):
                 raise ValueError("DATABASE_URL must point to PostgreSQL in production.")
             if not self.SERVICE_API_KEY:

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from website_agent.domain.spec import SiteSpec
@@ -34,7 +34,7 @@ class LayoutAssembler:
         """Returns dict of {relative_file_path: file_content}."""
         files: dict[str, str] = {}
         theme_css = self._load_theme_css(site.theme.value)
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
 
         template = self._env.get_template("base.html")
 

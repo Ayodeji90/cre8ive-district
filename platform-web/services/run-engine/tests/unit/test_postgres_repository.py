@@ -1,5 +1,7 @@
-import pytest
 from uuid import uuid4
+
+import pytest
+
 from run_engine.domain.run import (
     ChannelPermissions,
     CreditBudget,

@@ -72,7 +72,10 @@ class LiteLLMPlanner:
         import litellm
 
         model = self._settings.PLANNER_MODEL
-        if not model.startswith("openrouter/") and "openrouter" in self._settings.OPENROUTER_API_BASE:
+        if (
+            not model.startswith("openrouter/")
+            and "openrouter" in self._settings.OPENROUTER_API_BASE
+        ):
             model = f"openrouter/{model}"
 
         response = await litellm.acompletion(

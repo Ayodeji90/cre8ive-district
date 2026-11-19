@@ -4,7 +4,7 @@ import json
 import logging
 import re
 import unicodedata
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import httpx
 
@@ -123,8 +123,12 @@ class ContentGenerator:
                     raise WebsiteCopyGenerationError("Copy provider omitted a headline.")
                 if not isinstance(subheadline, str) or not subheadline.strip():
                     raise WebsiteCopyGenerationError("Copy provider omitted a subheadline.")
-                if not isinstance(stories, list) or not all(isinstance(item, str) for item in stories):
-                    raise WebsiteCopyGenerationError("Copy provider returned an invalid about story.")
+                if not isinstance(stories, list) or not all(
+                    isinstance(item, str) for item in stories
+                ):
+                    raise WebsiteCopyGenerationError(
+                        "Copy provider returned an invalid about story."
+                    )
                 if not isinstance(services, list) or not all(
                     isinstance(item, dict)
                     and isinstance(item.get("title"), str)
@@ -137,7 +141,10 @@ class ContentGenerator:
                     "subheadline": subheadline.strip()[:500],
                     "about_story": [item.strip()[:1000] for item in stories[:4]],
                     "services": [
-                        {"title": item["title"].strip()[:100], "description": item["description"].strip()[:500]}
+                        {
+                            "title": item["title"].strip()[:100],
+                            "description": item["description"].strip()[:500],
+                        }
                         for item in services[:8]
                     ],
                 }
@@ -147,7 +154,9 @@ class ContentGenerator:
             if not self._stub:
                 if isinstance(exc, WebsiteCopyGenerationError):
                     raise
-                raise WebsiteCopyGenerationError("Website copy response validation failed.") from exc
+                raise WebsiteCopyGenerationError(
+                    "Website copy response validation failed."
+                ) from exc
             logger.warning("LLM website copy generation fallback: %s", exc)
         return {}
 
@@ -188,18 +197,24 @@ class ContentGenerator:
             else business.services
         )
 
-        hero_headline = (
-            ai_copy.get("headline")
-            or brand.tagline
-            or brand.name
+        hero_headline = ai_copy.get("headline") or brand.tagline or brand.name
+        hero_subheadline = (
+            ai_copy.get("subheadline") or business.description or f"Discover {brand.name}."
         )
-        hero_subheadline = ai_copy.get("subheadline") or business.description or f"Discover {brand.name}."
         contact_url = (
             f"https://wa.me/{business.whatsapp_number}"
             if business.whatsapp_number
-            else f"mailto:{business.email}" if business.email else "#contact"
+            else f"mailto:{business.email}"
+            if business.email
+            else "#contact"
         )
-        contact_label = "Connect on WhatsApp" if business.whatsapp_number else "Send us an email" if business.email else "Get in touch"
+        contact_label = (
+            "Connect on WhatsApp"
+            if business.whatsapp_number
+            else "Send us an email"
+            if business.email
+            else "Get in touch"
+        )
 
         # 1. Homepage (index)
         home_sections = [
@@ -225,7 +240,14 @@ class ContentGenerator:
                         {
                             "icon": "✦",
                             "title": s,
-                            "description": next((item["description"] for item in custom_services or [] if item.get("title") == s), business.description or f"Learn more about {s} from {brand.name}."),
+                            "description": next(
+                                (
+                                    item["description"]
+                                    for item in custom_services or []
+                                    if item.get("title") == s
+                                ),
+                                business.description or f"Learn more about {s} from {brand.name}.",
+                            ),
                         }
                         for s in services_list[:4]
                     ],
@@ -248,14 +270,22 @@ class ContentGenerator:
                 component="about_story",
                 props={
                     "heading": f"The Story Behind {brand.name}",
-                    "paragraphs": ai_copy.get("about_story") or [business.description or f"Welcome to {brand.name}."] ,
+                    "paragraphs": ai_copy.get("about_story")
+                    or [business.description or f"Welcome to {brand.name}."],
                 },
             ),
             SectionSpec(
                 component="about_values",
                 props={
                     "heading": "Our approach",
-                    "values": [{"icon": "✦", "title": "Our work", "description": business.description or f"Learn about {brand.name} and what it offers."}],
+                    "values": [
+                        {
+                            "icon": "✦",
+                            "title": "Our work",
+                            "description": business.description
+                            or f"Learn about {brand.name} and what it offers.",
+                        }
+                    ],
                 },
             ),
             SectionSpec(
@@ -281,7 +311,14 @@ class ContentGenerator:
                         {
                             "icon": "⚡",
                             "title": s,
-                            "description": next((item["description"] for item in custom_services or [] if item.get("title") == s), business.description or f"Learn more about {s} from {brand.name}."),
+                            "description": next(
+                                (
+                                    item["description"]
+                                    for item in custom_services or []
+                                    if item.get("title") == s
+                                ),
+                                business.description or f"Learn more about {s} from {brand.name}.",
+                            ),
                         }
                         for s in services_list
                     ],
@@ -309,7 +346,9 @@ class ContentGenerator:
                 component="contact_whatsapp",
                 props={
                     "heading": "Contact",
-                    "description": f"{business.location}." if business.location else f"Get in touch with {brand.name}.",
+                    "description": f"{business.location}."
+                    if business.location
+                    else f"Get in touch with {brand.name}.",
                 },
             ),
         ]

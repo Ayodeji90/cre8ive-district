@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 import httpx
@@ -15,13 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class VercelDeployer(Protocol):
-    async def deploy(
-        self, site: SiteSpec, file_tree: dict[str, str]
-    ) -> DeploymentResult: ...
+    async def deploy(self, site: SiteSpec, file_tree: dict[str, str]) -> DeploymentResult: ...
 
 
 class MockVercelDeployer:
@@ -113,7 +112,6 @@ class LiveVercelDeployer:
                     deploy_res.raise_for_status()
                     deploy_data = deploy_res.json()
                     deployment_id = deploy_data["id"]
-                    vercel_url = f"https://{deploy_data.get('url', f'{project_name}.vercel.app')}"
 
                     # Vercel accepts deployments asynchronously; do not publish a URL before READY.
                     state = deploy_data.get("readyState", "BUILDING")
@@ -147,7 +145,12 @@ class LiveVercelDeployer:
                         deployed_at=utc_now(),
                         ready_state="READY",
                     )
-            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError, RuntimeError) as exc:
+            except (
+                httpx.TimeoutException,
+                httpx.NetworkError,
+                httpx.HTTPStatusError,
+                RuntimeError,
+            ) as exc:
                 last_error = exc
                 logger.warning("Vercel deployment attempt %d failed: %s", attempt, exc)
                 if attempt < 3:
@@ -178,9 +181,7 @@ class LiveVercelDeployer:
         create_res.raise_for_status()
         return create_res.json()["id"]
 
-    async def _assign_domain(
-        self, client: httpx.AsyncClient, project_id: str, domain: str
-    ) -> None:
+    async def _assign_domain(self, client: httpx.AsyncClient, project_id: str, domain: str) -> None:
         try:
             existing = await client.get(
                 f"{self._base_url}/v9/projects/{project_id}/domains/{domain}",

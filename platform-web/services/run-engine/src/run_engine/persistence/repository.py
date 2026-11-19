@@ -54,9 +54,7 @@ class InMemoryRunRepository:
             return None
         # hydrate with latest tasks and events
         run_copy = copy.deepcopy(run)
-        run_copy.tasks = [
-            copy.deepcopy(t) for t in self._tasks.values() if t.run_id == run_id
-        ]
+        run_copy.tasks = [copy.deepcopy(t) for t in self._tasks.values() if t.run_id == run_id]
         run_copy.events = copy.deepcopy(self._events.get(run_id, []))
         return run_copy
 
@@ -122,7 +120,12 @@ class InMemoryRunRepository:
     async def get_all_active_runs(self) -> list[Run]:
         active = []
         for run in self._runs.values():
-            if run.status in {RunStatus.STARTING, RunStatus.PLANNING, RunStatus.EXECUTING, RunStatus.WAITING_APPROVAL}:
+            if run.status in {
+                RunStatus.STARTING,
+                RunStatus.PLANNING,
+                RunStatus.EXECUTING,
+                RunStatus.WAITING_APPROVAL,
+            }:
                 current = await self.get_run(run.id)
                 if current is not None:
                     active.append(current)
@@ -193,6 +196,7 @@ class PostgresRunRepository:
     async def get_run(self, run_id: UUID) -> Run | None:
         from sqlalchemy import select
         from sqlalchemy.orm import selectinload
+
         from run_engine.persistence.models import RunModel
 
         async with self._session_factory() as session:
@@ -280,6 +284,7 @@ class PostgresRunRepository:
 
     async def get_pending_approval_tasks(self, run_id: UUID) -> list[RunTask]:
         from sqlalchemy import select
+
         from run_engine.persistence.models import RunTaskModel
 
         async with self._session_factory() as session:
@@ -309,6 +314,7 @@ class PostgresRunRepository:
 
     async def get_events(self, run_id: UUID, since: datetime | None = None) -> list[RunEvent]:
         from sqlalchemy import select
+
         from run_engine.persistence.models import RunEventModel
 
         async with self._session_factory() as session:
@@ -322,6 +328,7 @@ class PostgresRunRepository:
     async def get_active_runs(self, business_id: UUID) -> list[Run]:
         from sqlalchemy import select
         from sqlalchemy.orm import selectinload
+
         from run_engine.persistence.models import RunModel
 
         active_statuses = [
@@ -342,9 +349,15 @@ class PostgresRunRepository:
     async def get_all_active_runs(self) -> list[Run]:
         from sqlalchemy import select
         from sqlalchemy.orm import selectinload
+
         from run_engine.persistence.models import RunModel
 
-        statuses = [RunStatus.STARTING.value, RunStatus.PLANNING.value, RunStatus.EXECUTING.value, RunStatus.WAITING_APPROVAL.value]
+        statuses = [
+            RunStatus.STARTING.value,
+            RunStatus.PLANNING.value,
+            RunStatus.EXECUTING.value,
+            RunStatus.WAITING_APPROVAL.value,
+        ]
         async with self._session_factory() as session:
             stmt = (
                 select(RunModel)

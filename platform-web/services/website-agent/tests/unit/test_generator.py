@@ -1,4 +1,5 @@
 import pytest
+
 from website_agent.application.generator import (
     ContentGenerator,
     select_theme_for_industry,

@@ -1,4 +1,5 @@
 import pytest
+
 from website_agent.application.generator import ContentGenerator
 from website_agent.domain.spec import (
     BrandInput,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ContextGatherer(Protocol):
@@ -66,6 +66,7 @@ class PlatformContextGatherer:
 
     async def gather(self, business_id: UUID) -> BusinessContext:
         import httpx
+
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
                 f"{self._api_url}/api/internal/businesses/{business_id}/agent-context",
@@ -110,7 +111,12 @@ class AgentLoop:
         """Schedule persisted non-terminal runs after repository initialization."""
         recovered = 0
         for run in runs:
-            if run.status not in {RunStatus.STARTING, RunStatus.PLANNING, RunStatus.EXECUTING, RunStatus.WAITING_APPROVAL}:
+            if run.status not in {
+                RunStatus.STARTING,
+                RunStatus.PLANNING,
+                RunStatus.EXECUTING,
+                RunStatus.WAITING_APPROVAL,
+            }:
                 continue
             self.spawn(run)
             recovered += 1
@@ -131,21 +137,38 @@ class AgentLoop:
             return
         try:
             run = await self._repo.get_run(run.id) or run
-            if run.status in {RunStatus.PAUSED, RunStatus.CANCELLED, RunStatus.COMPLETED, RunStatus.FAILED}:
+            if run.status in {
+                RunStatus.PAUSED,
+                RunStatus.CANCELLED,
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+            }:
                 return
             await self._recover_interrupted_tasks(run)
             run = await self._repo.get_run(run.id) or run
-            if run.status in {RunStatus.PAUSED, RunStatus.CANCELLED, RunStatus.COMPLETED, RunStatus.FAILED}:
+            if run.status in {
+                RunStatus.PAUSED,
+                RunStatus.CANCELLED,
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+            }:
                 return
             run.status = RunStatus.STARTING
             run.started_at = run.started_at or utc_now()
             await self._repo.update_run(run)
-            await self._emit(run, RunEventType.RUN_STARTED, "Abija has started or resumed autonomous work.")
+            await self._emit(
+                run, RunEventType.RUN_STARTED, "Abija has started or resumed autonomous work."
+            )
             await self._run_loop(run)
         except asyncio.CancelledError:
             logger.info("Run %s interrupted; persisted progress will be recovered.", run.id)
             current = await self._repo.get_run(run.id)
-            if current and current.status not in {RunStatus.PAUSED, RunStatus.CANCELLED, RunStatus.COMPLETED, RunStatus.FAILED}:
+            if current and current.status not in {
+                RunStatus.PAUSED,
+                RunStatus.CANCELLED,
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+            }:
                 if current.status != RunStatus.WAITING_APPROVAL:
                     current.status = RunStatus.STARTING
                 await self._repo.update_run(current)
@@ -175,17 +198,29 @@ class AgentLoop:
             if task.status == TaskStatus.EXECUTING:
                 if not task.output_data:
                     task.status = TaskStatus.FAILED
-                    task.error_message = "Run engine restarted before this task produced a saved result."
+                    task.error_message = (
+                        "Run engine restarted before this task produced a saved result."
+                    )
                     task.completed_at = utc_now()
                     await self._repo.update_task(task)
-                    await self._emit(run, RunEventType.TASK_FAILED, f"Interrupted task failed: {task.title}", task_id=task.id)
+                    await self._emit(
+                        run,
+                        RunEventType.TASK_FAILED,
+                        f"Interrupted task failed: {task.title}",
+                        task_id=task.id,
+                    )
                     continue
                 if needs_approval(task, run.permissions):
                     task.status = TaskStatus.WAITING_APPROVAL
                     run.status = RunStatus.WAITING_APPROVAL
                     await self._repo.update_task(task)
                     await self._repo.update_run(run)
-                    await self._emit(run, RunEventType.APPROVAL_REQUESTED, f"Approval is still needed: {task.title}", task_id=task.id)
+                    await self._emit(
+                        run,
+                        RunEventType.APPROVAL_REQUESTED,
+                        f"Approval is still needed: {task.title}",
+                        task_id=task.id,
+                    )
                 else:
                     task.status = TaskStatus.APPROVED
                     await self._repo.update_task(task)
@@ -198,11 +233,15 @@ class AgentLoop:
                     task.status = TaskStatus.REJECTED
                     task.completed_at = utc_now()
                     await self._repo.update_task(task)
-                    await self._emit(run, RunEventType.TASK_REJECTED, f"Declined: {task.title}", task_id=task.id)
+                    await self._emit(
+                        run, RunEventType.TASK_REJECTED, f"Declined: {task.title}", task_id=task.id
+                    )
                     continue
                 task.status = TaskStatus.APPROVED
                 await self._repo.update_task(task)
-                await self._emit(run, RunEventType.TASK_APPROVED, f"Approved: {task.title}", task_id=task.id)
+                await self._emit(
+                    run, RunEventType.TASK_APPROVED, f"Approved: {task.title}", task_id=task.id
+                )
 
             if task.status == TaskStatus.APPROVED:
                 if context is None:
@@ -225,15 +264,19 @@ class AgentLoop:
             task.error_message = f"Delivery failed: {exc}"
             task.completed_at = utc_now()
             await self._repo.update_task(task)
-            await self._emit(run, RunEventType.TASK_FAILED, f"Task failed: {task.title}", task_id=task.id)
+            await self._emit(
+                run, RunEventType.TASK_FAILED, f"Task failed: {task.title}", task_id=task.id
+            )
             return False
         task.status = TaskStatus.COMPLETED
         task.completed_at = utc_now()
         run.budget.charge(task.actual_credits)
         await self._repo.complete_task(run, task)
         await self._emit(
-            run, RunEventType.TASK_COMPLETED,
-            f"Completed: {task.title} (used {task.actual_credits} credits)", task_id=task.id,
+            run,
+            RunEventType.TASK_COMPLETED,
+            f"Completed: {task.title} (used {task.actual_credits} credits)",
+            task_id=task.id,
         )
         return True
 
@@ -246,18 +289,26 @@ class AgentLoop:
             run = refreshed
 
             # Termination checks
-            if run.status in (RunStatus.PAUSED, RunStatus.CANCELLED, RunStatus.COMPLETED, RunStatus.FAILED):
+            if run.status in (
+                RunStatus.PAUSED,
+                RunStatus.CANCELLED,
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+            ):
                 logger.info("Run %s halted with status: %s", run.id, run.status)
                 return
 
             if run.budget.exhausted:
                 await self._complete(
-                    run, "Credit budget exhausted — Abija has completed all work within your credit limit."
+                    run,
+                    "Credit budget exhausted — Abija has completed all work within your credit limit.",
                 )
                 return
 
             if run.iteration >= run.max_iterations:
-                await self._complete(run, f"Reached maximum iteration limit of {run.max_iterations}.")
+                await self._complete(
+                    run, f"Reached maximum iteration limit of {run.max_iterations}."
+                )
                 return
 
             # 1. OBSERVE: Gather context
@@ -288,7 +339,9 @@ class AgentLoop:
                     return
 
                 if run.budget.exhausted:
-                    await self._emit(run, RunEventType.BUDGET_EXHAUSTED, "Credit budget fully exhausted.")
+                    await self._emit(
+                        run, RunEventType.BUDGET_EXHAUSTED, "Credit budget fully exhausted."
+                    )
                     break
 
                 if not run.budget.can_afford(task.estimated_credits):
@@ -446,8 +499,10 @@ class AgentLoop:
                     logger.info("Approval timed out for task %s", task.id)
                     return False
                 try:
-                    return await asyncio.wait_for(asyncio.shield(future), timeout=min(remaining, 1.0))
-                except asyncio.TimeoutError:
+                    return await asyncio.wait_for(
+                        asyncio.shield(future), timeout=min(remaining, 1.0)
+                    )
+                except TimeoutError:
                     persisted = await self._repo.get_task(task.id)
                     if persisted and persisted.status in {TaskStatus.APPROVED, TaskStatus.REJECTED}:
                         return persisted.status == TaskStatus.APPROVED

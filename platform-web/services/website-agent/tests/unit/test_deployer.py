@@ -1,6 +1,7 @@
 import pytest
-from website_agent.domain.spec import BrandInput, BusinessInput
+
 from website_agent.application.generator import ContentGenerator
+from website_agent.domain.spec import BrandInput, BusinessInput
 from website_agent.providers.vercel import MockVercelDeployer
 from website_agent.rendering.assembler import LayoutAssembler
 

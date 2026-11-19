@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import select
+
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from website_agent.persistence.models import Base, SiteJobModel

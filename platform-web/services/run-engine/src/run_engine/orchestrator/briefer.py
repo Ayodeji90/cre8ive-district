@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from run_engine.domain.run import Run, TaskStatus
 
 
@@ -27,5 +28,5 @@ def format_brief_summary(run: Run) -> dict:
             }
             for t in completed[-5:]
         ],
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

@@ -1,10 +1,7 @@
-from uuid import uuid4
 from website_agent.domain.spec import (
     BrandInput,
     BrandPalette,
     BusinessInput,
-    PageSpec,
-    SectionSpec,
     SiteSpec,
     ThemeType,
     TypographyPair,

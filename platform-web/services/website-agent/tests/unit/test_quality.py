@@ -1,11 +1,12 @@
+import pytest
+
+from website_agent.application.generator import ContentGenerator
 from website_agent.domain.spec import (
     BrandInput,
     BusinessInput,
 )
-from website_agent.application.generator import ContentGenerator
 from website_agent.quality.checker import WebsiteQualityChecker
 from website_agent.rendering.assembler import LayoutAssembler
-import pytest
 
 
 @pytest.mark.asyncio
