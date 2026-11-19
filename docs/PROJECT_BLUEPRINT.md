@@ -2,7 +2,7 @@
 
 **Canonical reference for product purpose, requirements, architecture, team, and research**
 
-**Reviewed:** 16 November 2026
+**Reviewed:** 19 November 2026
 
 ## Product direction
 
@@ -15,6 +15,8 @@ A customer explains their business to **Abija**, an AI creative partner. Abija g
 The customer remains in control. The product must not imply generated work is fact-checked, legally cleared, deployed, or commercially successful until those things have actually happened.
 
 The latest founder-provided platform description is the current product direction. Older research also describes a bespoke creative studio. Keep useful studio operating practices as context, but do not let that older direction silently redefine the software product.
+
+The founder has confirmed the [Foundable End-to-End Architecture & Workflow Explorer](https://sites.google.com/view/foundableend-to-endarchitectur/full-page-embed?authuser=1) as a north star for where Cre8ive District should go. Build toward one coherent customer experience, a shared project state, coordinated Build and Run workflows, explicit approval for consequential actions, and a feedback loop that can propose useful next steps. The explorer is a product direction reference, not evidence of Foundable's production internals or a commitment to copy its pricing, credits, integrations, and every capability shown.
 
 ## Customers and problems
 
@@ -61,6 +63,17 @@ These are hypotheses. Interviews and early-user behavior must determine the firs
 
 WhatsApp intake; social account OAuth, publishing, scheduling, and analytics; self-serve custom domains and advanced site editing; broad CRM/marketplace integrations; autonomous posting, outreach, or spending; generalized AI consulting; custom software or hardware. Add these only after validating customer need, delivery ownership, privacy/security impact, and ongoing support.
 
+### North-star product direction
+
+- Present marketing discovery and the signed-in workspace as one Cre8ive District experience, with a clear handoff from a visitor's idea to Abija and no confusing brand or navigation break. The target may be one Next.js app with route groups; this is a product experience decision, not a requirement to share one runtime or deployment forever.
+- Establish one canonical `ProjectState` for the customer's business brief, brand tokens and versions, site builds and deployment status, approvals, credits, and run progress. In the current schema, `Business` is the natural starting aggregate; evolve it rather than creating a parallel `projects` record without a distinct domain need. Represent state through related, versioned records and an API view rather than one oversized row.
+- Make the Run Engine the end-to-end orchestrator for Build and Run workflows. Branding and website capabilities should read from and write through versioned contracts against canonical state. They may remain separate worker services during transition; their internal service boundaries must not create competing customer-visible state.
+- Add sandbox preview, version history, and `*.cre8ivedistrict.app` publishing as the Build experience matures. Show a site as live only after deployment succeeds.
+- Add approval cards for external actions, with clear scopes, recorded decisions, idempotent execution, and a reliable way to inspect or recover outcomes. Build an undo path for actions that can be safely reversed.
+- Close the loop with consented business telemetry and evidence-based recommendations. Abija can propose the next action; execution still follows the configured approval and permission rules.
+
+Treat this as a direction to reach in stages. Keep the MVP centered on the verified brand-to-website journey, and promote north-star capabilities into launch scope only when their implementation, operations, and customer value are validated. Do not import Foundable-specific pricing, credit allowances, Stripe behavior, or market claims as Cre8ive District decisions.
+
 ## Product quality requirements
 
 - Ground outputs in customer facts; distinguish facts, extracted data, assumptions, and generated suggestions.
@@ -74,6 +87,55 @@ WhatsApp intake; social account OAuth, publishing, scheduling, and analytics; se
 - Define consent, data retention/deletion, provider sharing, and asset/IP terms before public launch.
 
 ## Architecture
+
+### Software delivery and release policy
+
+Every change must enter through a pull request and pass required checks before merging to
+`main`. CI validates frontend apps/packages, the Platform API, Branding Agent, Website Agent,
+and Run Engine; it also validates database migrations and builds deployable artifacts. Pull
+request checks use stubbed providers and disposable services, with no production secrets or
+deployment permissions. Checks should run for every pull request so a path filter cannot leave a
+required status check missing.
+
+Merging to `main` may publish immutable, commit-addressed artifacts after CI succeeds. Staging
+deploys automatically and runs health and workflow smoke checks. Production deploys only an
+artifact already verified in staging, with an explicit release approval, database migration
+gate, health checks, and a documented rollback target. The hosting provider and production
+environment are not yet confirmed; GitHub Actions must not imply that image publication alone
+deploys a service. Use least-privilege workflow permissions, pin third-party Actions to verified
+full commit SHAs, keep fork PRs unprivileged, and use short-lived OIDC credentials if AWS is
+selected. Repository branch protection and deployment environments are part of the release
+control, not optional workflow comments.
+
+### Foundation decision: canonical customer state
+
+**Decision (19 November 2026):** `Business.id` remains the canonical customer-workspace
+identity during the foundation phase. The existing chat, billing, brand, and website flows
+already depend on `Business`; changing the identity before those paths are migrated would
+split customer state and risk losing ownership and credit history. `ProjectState` is the
+customer-facing aggregate/API view over that identity and its related versioned records, not
+a second mutable copy of business profile, status, plan, or credit balance.
+
+The new `Project` schema is therefore transitional scaffolding. Do not connect new frontend
+flows to it or treat its copied fields as authoritative yet. Before adopting it as the physical
+record, the backend owner must either migrate existing `Business` rows and every dependent
+foreign key in one compatibility-safe sequence, or remove the duplicated mutable columns and
+make `Project` a stable-identity wrapper whose profile and credits resolve through `Business`.
+The selected migration path must preserve existing business IDs, ownership, orders, credit
+ledger, brands, websites, conversations, and deployment history. No destructive migration is
+approved by this decision.
+
+`ProjectState` must compose the existing business profile and credits with versioned brand
+kits, site builds, review/approval records, and execution state. The Run Engine remains the
+single authority for orchestration runs, tasks, and events; API-facing run state must be a
+projection or use a shared stable run ID, not a competing run lifecycle. Approval records may
+record a decision, but the state must not imply that an external action executed until a
+capability actually performed it and persisted its outcome.
+
+The frontend may begin identity continuity using `business_id` once the backend publishes a
+stable state endpoint and chat-resume contract. It must not depend on `/api/projects` until
+those contracts and the migration path are settled. See the active verification and backend
+actions in [PROJECT_EXECUTION.md](./PROJECT_EXECUTION.md).
 
 ### Current code structure
 
@@ -98,6 +160,8 @@ This is a target, not a deployed architecture. Current code/configuration still 
 - Website Agent owns site specification, rendering, quality, and deployment operations; the Platform API remains the customer-facing job-state source.
 - Run Engine owns orchestration state; task capabilities must call authorized services and must not represent drafts as external actions.
 - Shared contracts are versioned. Producer and consumer changes must remain compatible or be released together.
+
+These boundaries describe the current implementation and its transition path. The north-star target is a unified customer-visible state and Run Engine orchestration across the journey, while specialized execution workers can remain separate where that keeps generation, rendering, or deployment reliable.
 
 ## People and role coverage
 
