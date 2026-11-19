@@ -1,0 +1,38 @@
+name: "Rollback · Backend"
+
+# Redeploys the previous immutable image tag to an ECS environment.
+# Migrations are intentionally not run: rollback is forward-only at the
+# database level. See docs/DEPLOYMENT.md for the expand/contract rule.
+#
+# Find the tag in the failed "Deploy · Backend" run summary or in GHCR
+# (images are tagged sha-<first 12 of the commit>).
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to roll back.
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: Previously deployed tag, for example sha-1a2b3c4d5e6f.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: "Rollback · ${{ inputs.environment }}"
+    uses: ./.github/workflows/_deploy-ecs.yml
+    with:
+      environment: ${{ inputs.environment }}
+      image_tag: ${{ inputs.image_tag }}
+      run_migrations: false

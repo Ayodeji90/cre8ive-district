@@ -1,60 +1,114 @@
 name: "Deploy · Backend"
 
-# Triggers on push to main when backend files change.
-# Builds Docker images and pushes to GitHub Container Registry (ghcr.io).
-# Deployment to the container host (Railway / Fly / ECS) is triggered
-# by the registry push — configure that in your hosting provider.
+# Publishes immutable images and promotes them through ECS environments:
+#   CI (main) -> build -> staging (migrate, deploy, smoke) -> production
+#
+# Production is gated by the `production` GitHub Environment's required
+# reviewers. Images are only published after "CI · Backend" succeeds on main.
+# Rollback: run the "Rollback · Backend" workflow with a previous sha- tag.
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI · Backend"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "platform-web/api/**"
-      - "platform-web/services/branding-agent/**"
-      - "platform-web/services/website-agent/**"
-
-concurrency:
-  group: deploy-backend
-  cancel-in-progress: false # don't cancel in-flight deploys
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cre8ive
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment for a manual release.
+        type: choice
+        options: [staging, production]
+        default: staging
+      ref:
+        description: Git ref to build.
+        type: string
+        default: main
 
 permissions:
   contents: read
   packages: write
+  id-token: write
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
-  # ── Determine which services changed ──────────────────────────────
-  changes:
-    name: Detect changes
+  preflight:
+    name: Resolve release
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      api: ${{ steps.filter.outputs.api }}
-      branding-agent: ${{ steps.filter.outputs.branding-agent }}
-      website-agent: ${{ steps.filter.outputs.website-agent }}
+      sha: ${{ steps.meta.outputs.sha }}
+      tag: ${{ steps.meta.outputs.tag }}
+      image_prefix: ${{ steps.meta.outputs.image_prefix }}
+      deploy: ${{ steps.changes.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
         with:
-          filters: |
-            api:
-              - 'platform-web/api/**'
-            branding-agent:
-              - 'platform-web/services/branding-agent/**'
-            website-agent:
-              - 'platform-web/services/website-agent/**'
+          ref: ${{ inputs.ref || github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
 
-  # ── Build & push API ──────────────────────────────────────────────
-  deploy-api:
-    name: "Build & push · API"
-    needs: changes
-    if: needs.changes.outputs.api == 'true'
+      - name: Resolve commit and image tag
+        id: meta
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${sha:0:12}" >> "$GITHUB_OUTPUT"
+          echo "image_prefix=$(printf 'ghcr.io/%s/cre8ive' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "Releasing $sha (sha-${sha:0:12})"
+
+      - name: Detect backend changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch: deploying."
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            files=$(git diff --name-only HEAD^1 HEAD)
+          else
+            files=$(git show --name-only --pretty=format: HEAD)
+          fi
+          echo "$files" | sed 's/^/  /'
+          if echo "$files" | grep -Eq '^(platform-web/(api|services)/|platform-web/docker-compose\.yml$|platform-web/api/\.dockerignore$|\.github/workflows/(ci-backend|deploy-backend|_deploy-ecs)\.yml$|\.github/actions/)'; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "No backend changes in this commit; skipping deploy."
+          fi
+
+  build:
+    name: "Build & push · ${{ matrix.service.tag }}"
+    needs: preflight
+    if: needs.preflight.outputs.deploy == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { context: "platform-web/api", tag: "api" }
+          - { context: "platform-web/services/branding-agent", tag: "branding-agent" }
+          - { context: "platform-web/services/website-agent", tag: "website-agent" }
+          - { context: "platform-web/services/run-engine", tag: "run-engine" }
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -67,84 +121,44 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ${{ env.IMAGE_PREFIX }}-api
+          images: ${{ needs.preflight.outputs.image_prefix }}-${{ matrix.service.tag }}
           tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+            type=raw,value=${{ needs.preflight.outputs.tag }}
 
       - uses: docker/build-push-action@v6
         with:
-          context: platform-web/api
+          context: ${{ matrix.service.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,scope=api,mode=max
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.service.tag }}
+          cache-to: type=gha,scope=${{ matrix.service.tag }},mode=max
 
-  # ── Build & push Branding Agent ───────────────────────────────────
-  deploy-branding-agent:
-    name: "Build & push · Branding Agent"
-    needs: changes
-    if: needs.changes.outputs.branding-agent == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  deploy-staging:
+    name: "Staging"
+    needs: [preflight, build]
+    if: >
+      needs.preflight.outputs.deploy == 'true' && needs.build.result == 'success' &&
+      (github.event_name == 'workflow_run' || inputs.environment == 'staging')
+    uses: ./.github/workflows/_deploy-ecs.yml
+    with:
+      environment: staging
+      image_tag: ${{ needs.preflight.outputs.tag }}
+      run_migrations: true
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ env.IMAGE_PREFIX }}-branding-agent
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: platform-web/services/branding-agent
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=branding-agent
-          cache-to: type=gha,scope=branding-agent,mode=max
-
-  # ── Build & push Website Agent ────────────────────────────────────
-  deploy-website-agent:
-    name: "Build & push · Website Agent"
-    needs: changes
-    if: needs.changes.outputs.website-agent == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ env.IMAGE_PREFIX }}-website-agent
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: platform-web/services/website-agent
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=website-agent
-          cache-to: type=gha,scope=website-agent,mode=max
+  deploy-production:
+    name: "Production"
+    needs: [preflight, build, deploy-staging]
+    if: >
+      always() && needs.preflight.outputs.deploy == 'true' && needs.build.result == 'success' &&
+      (
+        (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+      )
+    uses: ./.github/workflows/_deploy-ecs.yml
+    with:
+      environment: production
+      image_tag: ${{ needs.preflight.outputs.tag }}
+      run_migrations: true

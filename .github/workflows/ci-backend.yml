@@ -1,45 +1,52 @@
 name: "CI · Backend"
 
+# Every backend PR check runs here, with no repository secrets. The deploy
+# workflow only publishes images after this workflow succeeds on main.
+#
+# Adding a service? Add lint/test jobs and a docker-build matrix entry, then
+# add the job names to ci-gate.needs.
+
 on:
   push:
     branches: [main]
-    paths:
-      - "platform-web/api/**"
-      - "platform-web/services/**"
   pull_request:
-    paths:
-      - "platform-web/api/**"
-      - "platform-web/services/**"
+  workflow_dispatch:
+  merge_group:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-backend-${{ github.ref }}
+  group: ci-backend-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.12"
+  # Pin the linter: an unpinned `pip install ruff` silently changes rules.
+  RUFF_VERSION: "0.16.0"
 
 jobs:
-  # ── API (FastAPI monolith) ────────────────────────────────────────
+  # ── API ───────────────────────────────────────────────────────────
   api-lint:
     name: "API · Lint"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: platform-web/api
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - run: pip install ruff
+      - run: pip install "ruff==${RUFF_VERSION}"
       - run: ruff check .
       - run: ruff format --check .
 
   api-test:
     name: "API · Test"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: platform-web/api
@@ -70,42 +77,89 @@ jobs:
       DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_test"
       REDIS_URL: "redis://localhost:6379"
       AI_STUB: "true"
+      ENV: "test"
       BRANDING_AGENT_URL: "http://localhost:8001"
       BRANDING_AGENT_API_KEY: "ci-test-key"
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: platform-web/api/pyproject.toml
-
       - run: pip install ".[dev]"
-      - run: alembic upgrade head
       - run: python -m pytest --tb=short -q
+
+  # ── Migrations (Postgres, forward-only) ───────────────────────────
+  migrations:
+    name: "API · Migrations"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: platform-web/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cre8ive_test
+          POSTGRES_USER: cre8ive
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cre8ive -d cre8ive_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_test"
+      ENV: "test"
+      AI_STUB: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: platform-web/api/pyproject.toml
+      - run: pip install .
+      - name: Exactly one migration head
+        run: |
+          heads=$(alembic heads | wc -l)
+          if [ "$heads" -ne 1 ]; then
+            echo "Expected one migration head, found $heads:"
+            alembic heads
+            exit 1
+          fi
+      - name: Upgrade an empty database
+        run: alembic upgrade head
+      - name: Upgrade is idempotent
+        run: alembic upgrade head
+      - name: Models match migrations
+        run: alembic check
 
   # ── Branding Agent ────────────────────────────────────────────────
   branding-agent-lint:
     name: "Branding Agent · Lint"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: platform-web/services/branding-agent
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - run: pip install ruff
+      - run: pip install "ruff==${RUFF_VERSION}"
       - run: ruff check src tests
       - run: ruff format --check src tests
 
   branding-agent-test:
     name: "Branding Agent · Test"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: platform-web/services/branding-agent
@@ -114,20 +168,17 @@ jobs:
       ENV: "test"
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: platform-web/services/branding-agent/pyproject.toml
-
       - name: Install system dependencies for WeasyPrint / CairoSVG
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libcairo2 libpango-1.0-0 libpangoft2-1.0-0 \
             libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info
-
       - run: pip install ".[dev]"
       - run: PYTHONPATH=src python -m pytest --tb=short -q
 
@@ -135,23 +186,23 @@ jobs:
   website-agent-lint:
     name: "Website Agent · Lint"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: platform-web/services/website-agent
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - run: pip install ruff
+      - run: pip install "ruff==${RUFF_VERSION}"
       - run: ruff check src tests
       - run: ruff format --check src tests
 
   website-agent-test:
     name: "Website Agent · Test"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: platform-web/services/website-agent
@@ -160,37 +211,121 @@ jobs:
       ENV: "test"
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: platform-web/services/website-agent/pyproject.toml
+      - run: pip install ".[dev]"
+      - run: PYTHONPATH=src python -m pytest --tb=short -q
 
-      - run: pip install ".[dev]" 2>/dev/null || pip install .
-      - run: PYTHONPATH=src python -m pytest --tb=short -q --passWithNoTests
-
-  # ── Docker build sanity check ─────────────────────────────────────
-  docker-build:
-    name: "Docker · Build check"
-    needs: [api-test, branding-agent-test]
+  # ── Run Engine ────────────────────────────────────────────────────
+  run-engine-lint:
+    name: "Run Engine · Lint"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: platform-web/services/run-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "ruff==${RUFF_VERSION}"
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+
+  run-engine-test:
+    name: "Run Engine · Test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: platform-web/services/run-engine
+    env:
+      AI_STUB: "true"
+      ENV: "test"
+      USE_IN_MEMORY_REPO: "true"
+      USE_IN_MEMORY_EVENTS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: platform-web/services/run-engine/pyproject.toml
+      - run: pip install ".[dev]"
+      - run: PYTHONPATH=src python -m pytest --tb=short -q
+
+  # ── Local stack definition ────────────────────────────────────────
+  compose-config:
+    name: "Local stack · Compose config"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f platform-web/docker-compose.yml config -q
+
+  # ── Docker images ─────────────────────────────────────────────────
+  docker-build:
+    name: "Docker · ${{ matrix.service.tag }}"
+    needs:
+      - api-lint
+      - api-test
+      - migrations
+      - branding-agent-lint
+      - branding-agent-test
+      - website-agent-lint
+      - website-agent-test
+      - run-engine-lint
+      - run-engine-test
+      - compose-config
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         service:
           - { context: "platform-web/api", tag: "api" }
           - { context: "platform-web/services/branding-agent", tag: "branding-agent" }
           - { context: "platform-web/services/website-agent", tag: "website-agent" }
+          - { context: "platform-web/services/run-engine", tag: "run-engine" }
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.service.context }}
           tags: cre8ive/${{ matrix.service.tag }}:ci
           load: false
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service.tag }}
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=gha,scope={0},mode=max', matrix.service.tag) || '' }}
+
+  # ── Single required check for branch protection ───────────────────
+  ci-gate:
+    name: "CI gate"
+    if: always()
+    needs:
+      - api-lint
+      - api-test
+      - migrations
+      - branding-agent-lint
+      - branding-agent-test
+      - website-agent-lint
+      - website-agent-test
+      - run-engine-lint
+      - run-engine-test
+      - compose-config
+      - docker-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "One or more CI jobs did not succeed."
+          echo '${{ toJSON(needs) }}'
+          exit 1
+      - run: echo "All backend checks passed."

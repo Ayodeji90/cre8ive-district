@@ -1,0 +1,435 @@
+name: Deploy to ECS
+
+# Reusable staging/production deploy. Called by deploy-backend.yml (normal
+# release) and rollback-backend.yml (redeploy a previous image).
+#
+# Only `preflight` references the GitHub Environment, so a protected
+# production environment asks for approval exactly once per deploy. Every
+# later job consumes the validated values as outputs.
+#
+# Environment-scoped repository variables required on `staging` and
+# `production` (see docs/DEPLOYMENT.md):
+#   AWS_ROLE_ARN, AWS_REGION, ECS_CLUSTER, PUBLIC_BASE_URL,
+#   ECS_SUBNETS, ECS_SECURITY_GROUPS, ECS_ASSIGN_PUBLIC_IP,
+#   ECS_TASKDEF_API/ECS_SERVICE_API,
+#   ECS_TASKDEF_WORKER/ECS_SERVICE_WORKER,
+#   ECS_TASKDEF_BRANDING/ECS_SERVICE_BRANDING,
+#   ECS_TASKDEF_WEBSITE/ECS_SERVICE_WEBSITE,
+#   ECS_TASKDEF_RUNENGINE/ECS_SERVICE_RUNENGINE,
+#   ECS_API_CONTAINER (default "api")
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment, also the AWS target.
+        required: true
+        type: string
+      image_tag:
+        description: Immutable image tag (for example sha-1a2b3c4d5e6f).
+        required: true
+        type: string
+      run_migrations:
+        description: Run `alembic upgrade head` as a one-off ECS task first.
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  # ── Validate target and remember what is running now ──────────────
+  preflight:
+    name: "Preflight · ${{ inputs.environment }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    outputs:
+      aws_role_arn: ${{ steps.export.outputs.aws_role_arn }}
+      aws_region: ${{ steps.export.outputs.aws_region }}
+      cluster: ${{ steps.export.outputs.cluster }}
+      public_base_url: ${{ steps.export.outputs.public_base_url }}
+      image_prefix: ${{ steps.export.outputs.image_prefix }}
+      subnets: ${{ steps.export.outputs.subnets }}
+      security_groups: ${{ steps.export.outputs.security_groups }}
+      assign_public_ip: ${{ steps.export.outputs.assign_public_ip }}
+      api_container: ${{ steps.export.outputs.api_container }}
+      svc_api: ${{ steps.export.outputs.svc_api }}
+      svc_worker: ${{ steps.export.outputs.svc_worker }}
+      svc_branding: ${{ steps.export.outputs.svc_branding }}
+      svc_website: ${{ steps.export.outputs.svc_website }}
+      svc_runengine: ${{ steps.export.outputs.svc_runengine }}
+      td_api: ${{ steps.export.outputs.td_api }}
+      td_worker: ${{ steps.export.outputs.td_worker }}
+      td_branding: ${{ steps.export.outputs.td_branding }}
+      td_website: ${{ steps.export.outputs.td_website }}
+      td_runengine: ${{ steps.export.outputs.td_runengine }}
+      previous_api: ${{ steps.previous.outputs.api }}
+      previous_worker: ${{ steps.previous.outputs.worker }}
+      previous_branding: ${{ steps.previous.outputs.branding }}
+      previous_website: ${{ steps.previous.outputs.website }}
+      previous_runengine: ${{ steps.previous.outputs.runengine }}
+    steps:
+      - name: Require environment variables
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          ECS_SUBNETS: ${{ vars.ECS_SUBNETS }}
+          ECS_SECURITY_GROUPS: ${{ vars.ECS_SECURITY_GROUPS }}
+          ECS_SERVICE_API: ${{ vars.ECS_SERVICE_API }}
+          ECS_SERVICE_WORKER: ${{ vars.ECS_SERVICE_WORKER }}
+          ECS_SERVICE_BRANDING: ${{ vars.ECS_SERVICE_BRANDING }}
+          ECS_SERVICE_WEBSITE: ${{ vars.ECS_SERVICE_WEBSITE }}
+          ECS_SERVICE_RUNENGINE: ${{ vars.ECS_SERVICE_RUNENGINE }}
+          ECS_TASKDEF_API: ${{ vars.ECS_TASKDEF_API }}
+          ECS_TASKDEF_WORKER: ${{ vars.ECS_TASKDEF_WORKER }}
+          ECS_TASKDEF_BRANDING: ${{ vars.ECS_TASKDEF_BRANDING }}
+          ECS_TASKDEF_WEBSITE: ${{ vars.ECS_TASKDEF_WEBSITE }}
+          ECS_TASKDEF_RUNENGINE: ${{ vars.ECS_TASKDEF_RUNENGINE }}
+          ECS_ASSIGN_PUBLIC_IP: ${{ vars.ECS_ASSIGN_PUBLIC_IP }}
+          ECS_API_CONTAINER: ${{ vars.ECS_API_CONTAINER }}
+        run: |
+          missing=0
+          for name in \
+            AWS_ROLE_ARN AWS_REGION ECS_CLUSTER PUBLIC_BASE_URL \
+            ECS_SUBNETS ECS_SECURITY_GROUPS \
+            ECS_SERVICE_API ECS_SERVICE_WORKER ECS_SERVICE_BRANDING \
+            ECS_SERVICE_WEBSITE ECS_SERVICE_RUNENGINE \
+            ECS_TASKDEF_API ECS_TASKDEF_WORKER ECS_TASKDEF_BRANDING \
+            ECS_TASKDEF_WEBSITE ECS_TASKDEF_RUNENGINE; do
+            value="${!name:-}"
+            if [ -z "$value" ]; then
+              echo "::error::Missing environment variable $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          {
+            echo "aws_role_arn=$AWS_ROLE_ARN"
+            echo "aws_region=$AWS_REGION"
+            echo "cluster=$ECS_CLUSTER"
+            echo "public_base_url=$PUBLIC_BASE_URL"
+            echo "image_prefix=$(printf 'ghcr.io/%s/cre8ive' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+            echo "subnets=$ECS_SUBNETS"
+            echo "security_groups=$ECS_SECURITY_GROUPS"
+            echo "assign_public_ip=${ECS_ASSIGN_PUBLIC_IP:-DISABLED}"
+            echo "api_container=${ECS_API_CONTAINER:-api}"
+            echo "svc_api=$ECS_SERVICE_API"
+            echo "svc_worker=$ECS_SERVICE_WORKER"
+            echo "svc_branding=$ECS_SERVICE_BRANDING"
+            echo "svc_website=$ECS_SERVICE_WEBSITE"
+            echo "svc_runengine=$ECS_SERVICE_RUNENGINE"
+            echo "td_api=$ECS_TASKDEF_API"
+            echo "td_worker=$ECS_TASKDEF_WORKER"
+            echo "td_branding=$ECS_TASKDEF_BRANDING"
+            echo "td_website=$ECS_TASKDEF_WEBSITE"
+            echo "td_runengine=$ECS_TASKDEF_RUNENGINE"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: cre8ive-deploy-${{ inputs.environment }}-${{ github.run_id }}
+
+      - name: Record current task definitions (rollback targets)
+        id: previous
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+          API: ${{ vars.ECS_SERVICE_API }}
+          WORKER: ${{ vars.ECS_SERVICE_WORKER }}
+          BRANDING: ${{ vars.ECS_SERVICE_BRANDING }}
+          WEBSITE: ${{ vars.ECS_SERVICE_WEBSITE }}
+          RUNENGINE: ${{ vars.ECS_SERVICE_RUNENGINE }}
+        run: |
+          set -euo pipefail
+          for pair in "api:$API" "worker:$WORKER" "branding:$BRANDING" "website:$WEBSITE" "runengine:$RUNENGINE"; do
+            key="${pair%%:*}"
+            service="${pair#*:}"
+            if [ -z "$service" ]; then
+              echo "::error::No service name configured for $key"
+              exit 1
+            fi
+            arn=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].taskDefinition' \
+              --output text)
+            echo "$key=$arn" >> "$GITHUB_OUTPUT"
+            echo "$key -> $arn"
+          done
+
+  # ── Migrations: one-off task, must exit 0 before any deploy ───────
+  migrate:
+    name: "Migrate · ${{ inputs.environment }}"
+    needs: preflight
+    if: inputs.run_migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.preflight.outputs.aws_role_arn }}
+          aws-region: ${{ needs.preflight.outputs.aws_region }}
+          role-session-name: cre8ive-migrate-${{ inputs.environment }}-${{ github.run_id }}
+
+      - name: Register task definition with the new image
+        id: register
+        uses: ./.github/actions/deploy-ecs-service
+        with:
+          cluster: ${{ needs.preflight.outputs.cluster }}
+          service: ${{ needs.preflight.outputs.svc_api }}
+          task_definition: ${{ needs.preflight.outputs.td_api }}
+          container: ${{ needs.preflight.outputs.api_container }}
+          image: ${{ needs.preflight.outputs.image_prefix }}-api:${{ inputs.image_tag }}
+          wait: "false"
+          update_service: "false"
+
+      - name: Run alembic upgrade head
+        env:
+          CLUSTER: ${{ needs.preflight.outputs.cluster }}
+          TASKDEF_ARN: ${{ steps.register.outputs.task_definition_arn }}
+          CONTAINER: ${{ needs.preflight.outputs.api_container }}
+          SUBNETS: ${{ needs.preflight.outputs.subnets }}
+          SECURITY_GROUPS: ${{ needs.preflight.outputs.security_groups }}
+          ASSIGN_PUBLIC_IP: ${{ needs.preflight.outputs.assign_public_ip }}
+        run: |
+          set -euo pipefail
+          subnets=$(printf '%s' "$SUBNETS" | tr -d ' ')
+          security_groups=$(printf '%s' "$SECURITY_GROUPS" | tr -d ' ')
+
+          overrides=$(jq -nc --arg container "$CONTAINER" \
+            '{containerOverrides:[{name:$container,command:["alembic","upgrade","head"]}]}')
+
+          task_arn=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASKDEF_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$security_groups],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
+            --overrides "$overrides" \
+            --started-by "github-actions-migrate-${GITHUB_RUN_ID}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          if [ -z "$task_arn" ] || [ "$task_arn" = "None" ]; then
+            echo "::error::ECS did not start a migration task (check subnet and security group capacity)"
+            exit 1
+          fi
+
+          echo "Waiting for $task_arn"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$task_arn"
+
+          exit_code=$(aws ecs describe-tasks \
+            --cluster "$CLUSTER" \
+            --tasks "$task_arn" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$exit_code" != "0" ]; then
+            echo "::error::Migration task exited with code $exit_code"
+            aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks "$task_arn" \
+              --query 'tasks[0].{stoppedReason:stoppedReason,containers:containers[*].{name:name,exitCode:exitCode,reason:reason}}'
+            exit 1
+          fi
+          echo "Migrations applied with $TASKDEF_ARN"
+
+  # ── Agents first: API must not call a new contract before it exists ─
+  deploy-agents:
+    name: "Deploy · ${{ matrix.name }}"
+    needs: [preflight, migrate]
+    if: >
+      always() && needs.preflight.result == 'success' &&
+      (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: branding-agent
+            service_output: svc_branding
+            taskdef_output: td_branding
+            container: branding-agent
+            image: branding-agent
+          - name: website-agent
+            service_output: svc_website
+            taskdef_output: td_website
+            container: website-agent
+            image: website-agent
+          - name: run-engine
+            service_output: svc_runengine
+            taskdef_output: td_runengine
+            container: run-engine
+            image: run-engine
+          - name: worker
+            service_output: svc_worker
+            taskdef_output: td_worker
+            container: api
+            image: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.preflight.outputs.aws_role_arn }}
+          aws-region: ${{ needs.preflight.outputs.aws_region }}
+          role-session-name: cre8ive-deploy-${{ matrix.name }}-${{ github.run_id }}
+      - uses: ./.github/actions/deploy-ecs-service
+        with:
+          cluster: ${{ needs.preflight.outputs.cluster }}
+          service: ${{ needs.preflight.outputs[matrix.service_output] }}
+          task_definition: ${{ needs.preflight.outputs[matrix.taskdef_output] }}
+          container: ${{ matrix.container }}
+          image: ${{ needs.preflight.outputs.image_prefix }}-${{ matrix.image }}:${{ inputs.image_tag }}
+
+  # ── API last, once its dependencies are healthy ──────────────────
+  deploy-api:
+    name: "Deploy · api"
+    needs: [preflight, migrate, deploy-agents]
+    if: >
+      always() && needs.preflight.result == 'success' &&
+      (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') &&
+      needs.deploy-agents.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.preflight.outputs.aws_role_arn }}
+          aws-region: ${{ needs.preflight.outputs.aws_region }}
+          role-session-name: cre8ive-deploy-api-${{ github.run_id }}
+      - uses: ./.github/actions/deploy-ecs-service
+        with:
+          cluster: ${{ needs.preflight.outputs.cluster }}
+          service: ${{ needs.preflight.outputs.svc_api }}
+          task_definition: ${{ needs.preflight.outputs.td_api }}
+          container: ${{ needs.preflight.outputs.api_container }}
+          image: ${{ needs.preflight.outputs.image_prefix }}-api:${{ inputs.image_tag }}
+
+  # ── Smoke test the public API, which checks the agents internally ─
+  smoke:
+    name: "Smoke · ${{ inputs.environment }}"
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Wait for /health and verify dependencies
+        env:
+          BASE_URL: ${{ needs.preflight.outputs.public_base_url }}
+        run: |
+          set -euo pipefail
+          base="${BASE_URL%/}"
+
+          wait_for() {
+            local path="$1" attempts="${2:-30}"
+            for _ in $(seq 1 "$attempts"); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$base$path" || true)
+              if [ "$code" = "200" ]; then
+                echo "200 $path"
+                return 0
+              fi
+              sleep 5
+            done
+            echo "::error::$path did not return 200 (last: $code)"
+            return 1
+          }
+
+          wait_for /health
+          wait_for /health/db
+          wait_for /health/deps 45
+
+          echo "Dependency report:"
+          curl -fsS "$base/health/deps" | tee deps.json
+          jq -e '.status == "ok"' deps.json >/dev/null
+
+  # ── Automatic rollback to the pre-deploy task definitions ────────
+  # No `environment:` here on purpose: production approval already happened
+  # in preflight, and a rollback must never wait for a human.
+  rollback:
+    name: "Rollback · ${{ inputs.environment }}"
+    needs: [preflight, deploy-agents, deploy-api, smoke]
+    if: >
+      failure() && needs.preflight.result == 'success' &&
+      needs.deploy-agents.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.preflight.outputs.aws_role_arn }}
+          aws-region: ${{ needs.preflight.outputs.aws_region }}
+          role-session-name: cre8ive-rollback-${{ github.run_id }}
+
+      - name: Restore previous task definitions
+        env:
+          CLUSTER: ${{ needs.preflight.outputs.cluster }}
+          PREVIOUS_API: ${{ needs.preflight.outputs.previous_api }}
+          PREVIOUS_WORKER: ${{ needs.preflight.outputs.previous_worker }}
+          PREVIOUS_BRANDING: ${{ needs.preflight.outputs.previous_branding }}
+          PREVIOUS_WEBSITE: ${{ needs.preflight.outputs.previous_website }}
+          PREVIOUS_RUNENGINE: ${{ needs.preflight.outputs.previous_runengine }}
+          SERVICE_API: ${{ needs.preflight.outputs.svc_api }}
+          SERVICE_WORKER: ${{ needs.preflight.outputs.svc_worker }}
+          SERVICE_BRANDING: ${{ needs.preflight.outputs.svc_branding }}
+          SERVICE_WEBSITE: ${{ needs.preflight.outputs.svc_website }}
+          SERVICE_RUNENGINE: ${{ needs.preflight.outputs.svc_runengine }}
+        run: |
+          set -uo pipefail
+          failed=0
+
+          restore() {
+            local label="$1" service="$2" taskdef="$3"
+            if [ -z "$service" ] || [ -z "$taskdef" ]; then
+              echo "::warning::Skipping $label: no service or previous task definition recorded"
+              return
+            fi
+            echo "Restoring $label -> $taskdef"
+            if ! aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "$service" \
+              --task-definition "$taskdef" >/dev/null; then
+              echo "::error::Failed to update $label"
+              failed=1
+              return
+            fi
+            if ! aws ecs wait services-stable --cluster "$CLUSTER" --services "$service"; then
+              echo "::error::$label did not stabilize after rollback"
+              failed=1
+            fi
+          }
+
+          restore api "$SERVICE_API" "$PREVIOUS_API"
+          restore worker "$SERVICE_WORKER" "$PREVIOUS_WORKER"
+          restore branding-agent "$SERVICE_BRANDING" "$PREVIOUS_BRANDING"
+          restore website-agent "$SERVICE_WEBSITE" "$PREVIOUS_WEBSITE"
+          restore run-engine "$SERVICE_RUNENGINE" "$PREVIOUS_RUNENGINE"
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Rollback was incomplete; check ECS service events."
+            exit 1
+          fi
+
+      - name: Report
+        if: always()
+        run: |
+          echo "::warning::Deploy of ${{ inputs.image_tag }} to ${{ inputs.environment }} failed; previous task definitions were restored."
+          echo "Targets were:"
+          echo "  api:        ${{ needs.preflight.outputs.previous_api }}"
+          echo "  worker:     ${{ needs.preflight.outputs.previous_worker }}"
+          echo "  branding:   ${{ needs.preflight.outputs.previous_branding }}"
+          echo "  website:    ${{ needs.preflight.outputs.previous_website }}"
+          echo "  run-engine: ${{ needs.preflight.outputs.previous_runengine }}"
