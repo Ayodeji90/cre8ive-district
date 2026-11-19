@@ -1,27 +1,27 @@
 export const workflowSteps = [
   {
-    title: "Tell Abija your idea",
-    body: "Describe what you want to sell, who you want to reach, and what you hope to build.",
+    title: "Describe your idea",
+    body: "The planned journey starts with what you want to sell, who you want to reach, and what you hope to build.",
     visual: "idea",
   },
   {
-    title: "She builds your brand",
-    body: "Turn your business brief into a clear brand direction, with visual identity choices to review.",
+    title: "Shape your brand",
+    body: "The planned workflow turns your business brief into brand directions and visual identity choices to review.",
     visual: "brand",
   },
   {
-    title: "A designer reviews it",
-    body: "Ask for changes, compare directions, and get another layer of creative judgment when you need it.",
+    title: "Review creative directions",
+    body: "The planned workflow will let you ask for changes, compare directions, and request human creative judgment.",
     visual: "review",
   },
   {
-    title: "Your website goes live",
-    body: "Create a mobile-friendly website that follows your brand and gives customers a way to reach you.",
+    title: "Plan your website",
+    body: "Prepare a mobile-friendly website concept that follows your brand and gives customers a way to reach you.",
     visual: "website",
   },
   {
-    title: "Start getting customers",
-    body: "Get your approved brand assets and share your new website with customers.",
+    title: "Prepare launch materials",
+    body: "The planned service will package approved brand assets and website deliverables for you to use.",
     visual: "launch",
   },
 ] as const;
@@ -29,34 +29,35 @@ export const workflowSteps = [
 export const capabilities = [
   {
     title: "Logo & brand identity",
-    body: "Logo direction, colour palette, type choices, and guidance for using your system consistently.",
+    body: "Planned brand deliverables include logo direction, a colour palette, type choices, and guidance for using your system consistently.",
     label: "01 / BRAND",
   },
   {
     title: "Professional website",
-    body: "A responsive site that explains what you do and makes it easy for customers to get in touch.",
+    body: "The planned website deliverable is a responsive site that explains what you do and helps customers get in touch.",
     label: "02 / WEB",
   },
   {
     title: "Social media kit",
-    body: "Reusable social-ready creative that carries your brand into the channels you already use.",
+    body: "Planned expansion: reusable social-ready creative that carries your brand into the channels you already use.",
     label: "03 / SOCIAL",
     note: "Planned expansion",
   },
   {
     title: "Brand guidelines PDF",
-    body: "A practical guide to your visual system, so your business can show up consistently.",
+    body: "Planned expansion: a practical guide to your visual system, so your business can show up consistently.",
     label: "04 / GUIDELINES",
     note: "Planned expansion",
   },
   {
-    title: "Designer review included",
-    body: "A designer can review and refine selected work when you want another layer of creative direction.",
+    title: "Human creative review",
+    body: "Human review and refinement are planned for work that benefits from a designer’s judgment.",
     label: "05 / HUMAN",
+    note: "Planned service",
   },
   {
     title: "Naira pricing, no surprises",
-    body: "Package plans and customer journeys built with the way African businesses operate in mind.",
+    body: "Packages will be priced in Nigerian naira (₦). Scope and exact prices will be published before checkout opens.",
     label: "06 / AFRICA",
   },
 ] as const;
@@ -64,32 +65,32 @@ export const capabilities = [
 export const platformPrinciples = [
   {
     title: "Your work stays yours",
-    body: "Download your brand assets and receive the agreed website deliverables.",
+    body: "The product is being designed to let you download approved brand assets and receive the website deliverables in your package.",
     label: "01",
   },
   {
     title: "Approval before publishing",
-    body: "Generated work stays in review until you approve the next step.",
+    body: "The planned workflow keeps generated work in review until you approve the next step.",
     label: "02",
   },
   {
     title: "A human when it matters",
-    body: "Creative review is available for work that needs a designer’s judgment.",
+    body: "Human creative review is planned for work that needs a designer’s judgment.",
     label: "03",
   },
   {
     title: "Pay in naira",
-    body: "The planned checkout is built around Nigerian payment methods and one-time packages.",
+    body: "The planned checkout is intended to support Nigerian payment methods and one-time packages.",
     label: "04",
   },
   {
     title: "Start with the essentials",
-    body: "Build a useful first presence before adding advanced marketing or business tools.",
+    body: "We plan to start with a useful first presence before adding advanced marketing or business tools.",
     label: "05",
   },
   {
     title: "Designed for mobile",
-    body: "A phone-first workflow that meets customers where they already run their businesses.",
+    body: "The product is being designed around a phone-first workflow for business owners on the go.",
     label: "06",
   },
 ] as const;
@@ -109,7 +110,7 @@ export const homeFaqs = [
   },
   {
     question: "How much does it cost?",
-    answer: "The current planning documents describe one-time packages in naira. Final package scope and prices will be confirmed before checkout is enabled.",
+    answer: "Packages are planned to be priced in Nigerian naira (₦). We have not published package amounts yet; the scope and exact prices will be shown before checkout opens.",
   },
   {
     question: "How long does it take?",

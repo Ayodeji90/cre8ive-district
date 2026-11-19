@@ -5,7 +5,17 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
+export function AuthForm({
+  mode,
+  callbackUrl = "/workspace",
+  switchHref,
+}: {
+  mode: "sign-in" | "sign-up";
+  /** Where Auth.js should return the customer, including any `idea` handoff. */
+  callbackUrl?: string;
+  /** Link to the other auth page, keeping the same handoff params. */
+  switchHref?: string;
+}) {
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -15,7 +25,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
     event.preventDefault();
     setIsSending(true);
     try {
-      const result = await signIn("resend", { email, redirect: false, callbackUrl: "/welcome" });
+      const result = await signIn("resend", { email, redirect: false, callbackUrl });
       if (result?.error) throw new Error(result.error);
       setSent(true);
       toast.success("Your sign-in link is on its way.");
@@ -34,7 +44,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         <p className="mt-2 text-sm leading-6 text-grey-600">{isSignUp ? "Start turning your business idea into a brand." : "Pick up where you left off with Abija."}</p>
       </div>
 
-      <Button type="button" variant="secondary" className="mt-7 h-12 w-full" onClick={() => void signIn("google", { callbackUrl: "/" })}>
+      <Button type="button" variant="secondary" className="mt-7 h-12 w-full" onClick={() => void signIn("google", { callbackUrl })}>
         <GoogleMark /> Continue with Google
       </Button>
 
@@ -48,7 +58,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       </form>
       <p className="mt-6 text-center text-sm text-grey-600">
         {isSignUp ? "Already have an account? " : "Don’t have an account? "}
-        <Link href={isSignUp ? "/sign-in" : "/sign-up"} className="font-bold text-orange-hover hover:underline">{isSignUp ? "Log in" : "Sign up"}</Link>
+        <Link href={switchHref ?? (isSignUp ? "/sign-in" : "/sign-up")} className="font-bold text-orange-hover hover:underline">{isSignUp ? "Log in" : "Sign up"}</Link>
       </p>
     </div>
   );

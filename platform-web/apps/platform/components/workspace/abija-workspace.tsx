@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { billingApi, businessesApi, websitesApi, type Business } from "@cre8ive/api-client";
@@ -20,6 +20,9 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
   const [hasStarted, setHasStarted] = useState(false);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const switcherButtonRef = useRef<HTMLButtonElement>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [deployedUrl, setDeployedUrl] = useState<string | null>(null);
   const [websiteStatus, setWebsiteStatus] = useState<string>("Drafting in Chat");
   const [websiteError, setWebsiteError] = useState<string | null>(null);
@@ -48,7 +51,7 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
 
   const businessId = (context.business_id as string) || null;
 
-  const refreshBusinesses = () => {
+  const refreshBusinesses = useCallback(() => {
     if (sessionStatus === "authenticated" && session?.user) {
       businessesApi
         .list()
@@ -57,13 +60,15 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
             setMyBusinesses(list);
           }
         })
-        .catch(() => {});
+        .catch(() =>
+          setLoadError("We couldn’t load your businesses. Check your connection and try again.")
+        );
     }
-  };
+  }, [session, sessionStatus]);
 
   useEffect(() => {
     refreshBusinesses();
-  }, [session, sessionStatus, businessId]);
+  }, [refreshBusinesses, businessId, reloadKey]);
 
   // Initialize conversation on mount if not started
   useEffect(() => {
@@ -83,7 +88,9 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
           setCredits(res.balance);
         }
       })
-      .catch(() => {});
+      .catch(() =>
+        setLoadError("We couldn’t load your credit balance. Check your connection and try again.")
+      );
 
     // Recover existing website deployment state if available
     websitesApi
@@ -99,8 +106,10 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
           setWebsiteError(res.last_error);
         }
       })
-      .catch(() => {});
-  }, [businessId]);
+      .catch(() =>
+        setLoadError("We couldn’t load your website status. Check your connection and try again.")
+      );
+  }, [businessId, reloadKey]);
 
   const handleLaunch = async () => {
     if (!businessId) {
@@ -143,7 +152,9 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
         } else if (res?.last_error) {
           setWebsiteError(res.last_error);
         }
-      }).catch(() => {});
+      }).catch(() =>
+        setWebsiteError("Couldn’t check website status. We’ll keep trying.")
+      );
     }, 2500);
     return () => window.clearInterval(timer);
   }, [businessId, websiteStatus]);
@@ -209,18 +220,37 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
           <Link href="/" className="text-lg font-extrabold tracking-[-0.08em] text-charcoal">
             Cre<span className="text-orange">8</span>ive District
           </Link>
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-orange/10 px-2.5 py-0.5 text-xs font-semibold text-orange-hover">
-            <span className="size-1.5 rounded-full bg-orange animate-pulse" />
-            Abija Agent Active
+          <span
+            role="status"
+            aria-label={isConnected ? "Abija connected" : "Abija reconnecting"}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold sm:px-2.5 ${
+              isConnected ? "bg-orange/10 text-orange-hover" : "bg-grey-100 text-grey-500"
+            }`}
+            title={isConnected ? "Connected to Abija" : "Connection lost — reconnecting"}
+          >
+            <span className={`size-1.5 rounded-full ${isConnected ? "bg-orange animate-pulse" : "bg-grey-400"}`} />
+            <span className="hidden sm:inline" aria-hidden="true">
+              {isConnected ? "Abija connected" : "Abija reconnecting"}
+            </span>
           </span>
 
           {/* Business Workspace Switcher */}
           <div className="relative">
             <button
+              ref={switcherButtonRef}
               type="button"
               onClick={() => setIsBusinessMenuOpen(!isBusinessMenuOpen)}
               className="flex items-center gap-1.5 rounded-lg border border-grey-200 bg-grey-50 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-grey-100 transition-all cursor-pointer max-w-[200px]"
               title="Switch business workspace"
+              aria-haspopup="true"
+              aria-expanded={isBusinessMenuOpen}
+              aria-controls="business-switcher-menu"
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && isBusinessMenuOpen) {
+                  event.stopPropagation();
+                  setIsBusinessMenuOpen(false);
+                }
+              }}
             >
               <span className="truncate font-semibold">
                 {currentBusiness?.name || (context.business_name as string) || "My Workspace"}
@@ -234,9 +264,20 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
               <>
                 <div
                   className="fixed inset-0 z-40"
+                  aria-hidden="true"
                   onClick={() => setIsBusinessMenuOpen(false)}
                 />
-                <div className="absolute left-0 mt-1.5 w-64 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div
+                  id="business-switcher-menu"
+                  className="absolute left-0 mt-1.5 w-64 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100"
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.stopPropagation();
+                      setIsBusinessMenuOpen(false);
+                      switcherButtonRef.current?.focus();
+                    }
+                  }}
+                >
                   <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-grey-400">
                     My Businesses
                   </div>
@@ -377,6 +418,22 @@ export function AbijaWorkspace({ initialIdea }: AbijaWorkspaceProps) {
           )}
         </div>
       </header>
+
+      {loadError && (
+        <div role="alert" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-error/20 bg-error/5 px-4 py-2 text-xs text-charcoal sm:px-6">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setLoadError(null);
+              setReloadKey((key) => key + 1);
+            }}
+            className="rounded-md border border-grey-300 bg-white px-2.5 py-1 text-xs font-semibold text-charcoal hover:bg-grey-50"
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {/* Main Split Screen Area */}
       <div className="flex flex-1 overflow-hidden">

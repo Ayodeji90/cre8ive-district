@@ -1,4 +1,8 @@
 import type { Adapter, AdapterUser, VerificationToken } from "next-auth/adapters";
+import { loadRootEnv } from "./root-env";
+
+// Must run before the secrets below are read.
+loadRootEnv();
 
 /**
  * NextAuth adapter backed by the FastAPI service.

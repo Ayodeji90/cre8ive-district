@@ -4,11 +4,13 @@ import { Button } from "@cre8ive/ui";
 import { useState, type FormEvent } from "react";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const platformUrl = (process.env.NEXT_PUBLIC_PLATFORM_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
 type Status = "idle" | "submitting" | "success";
 
 export function WaitlistForm({ id, source }: { id: string; source: "hero" | "footer" }) {
   const [email, setEmail] = useState("");
+  const [businessDescription, setBusinessDescription] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
 
@@ -33,6 +35,7 @@ export function WaitlistForm({ id, source }: { id: string; source: "hero" | "foo
         body: JSON.stringify({
           email: value,
           source,
+          business_description: businessDescription.trim() || undefined,
           company: new FormData(event.currentTarget).get("company"),
         }),
       });
@@ -52,6 +55,8 @@ export function WaitlistForm({ id, source }: { id: string; source: "hero" | "foo
   }
 
   if (status === "success") {
+    const idea = businessDescription.trim();
+
     return (
       <div
         role="status"
@@ -65,6 +70,14 @@ export function WaitlistForm({ id, source }: { id: string; source: "hero" | "foo
         <p className="mt-2 text-sm leading-6 text-grey-600">
           We’ll email <span className="font-semibold text-charcoal">{email.trim()}</span> when early access opens.
         </p>
+        {idea && (
+          <a
+            href={`${platformUrl}/sign-in?idea=${encodeURIComponent(idea)}`}
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-orange px-5 text-sm font-bold text-charcoal transition-colors hover:bg-orange-hover"
+          >
+            Start your workspace with this idea <span aria-hidden="true">→</span>
+          </a>
+        )}
       </div>
     );
   }
@@ -105,6 +118,23 @@ export function WaitlistForm({ id, source }: { id: string; source: "hero" | "foo
         >
           Join waitlist <span aria-hidden="true">→</span>
         </Button>
+      </div>
+
+      <div className="mt-3 px-1">
+        <label htmlFor={`${id}-business-description`} className="mb-1.5 block text-xs font-semibold text-charcoal">
+          Tell us about your business <span className="font-normal text-grey-600">(optional)</span>
+        </label>
+        <textarea
+          id={`${id}-business-description`}
+          name="business_description"
+          rows={2}
+          maxLength={1000}
+          value={businessDescription}
+          disabled={status === "submitting"}
+          onChange={(event) => setBusinessDescription(event.target.value)}
+          placeholder="What do you sell, or what are you planning to build?"
+          className="w-full resize-y rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm leading-5 text-charcoal outline-none placeholder:text-grey-400 focus:border-orange focus:ring-2 focus:ring-orange/20"
+        />
       </div>
 
       {/* Honeypot for bots; hidden from people and assistive technology. */}

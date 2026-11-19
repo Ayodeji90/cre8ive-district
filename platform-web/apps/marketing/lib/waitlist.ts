@@ -9,6 +9,7 @@ const API_URL = (
 export interface WaitlistSignup {
   email: string;
   source: string;
+  business_description?: string;
 }
 
 /**

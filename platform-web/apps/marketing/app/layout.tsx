@@ -6,7 +6,23 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Cre8ive District — Build your brand", template: "%s | Cre8ive District" },
-  description: "Cre8ive District is an AI-powered brand and website launch platform for businesses in Nigeria. Join the waitlist for early access.",
+  description: "Shape your brand and online presence with guided, AI-assisted creative tools and human review. Cre8ive District is in development; join the waitlist for early access.",
+  metadataBase: new URL("https://cre8ivedistrict.com"),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Cre8ive District",
+    title: "Cre8ive District — Build your brand",
+    description: "Shape your brand and online presence with guided, AI-assisted creative tools and human review.",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cre8ive District — guided brand and website creation" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cre8ive District — Build your brand",
+    description: "Shape your brand and online presence with guided, AI-assisted creative tools and human review.",
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function MarketingLayout({ children }: Readonly<{ children: React.ReactNode }>) {

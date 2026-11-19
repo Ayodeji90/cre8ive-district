@@ -5,6 +5,10 @@ import { SignJWT, jwtVerify } from "jose";
 import type { JWT, JWTDecodeParams, JWTEncodeParams } from "next-auth/jwt";
 import type { AdapterUser } from "next-auth/adapters";
 import { authAdapter } from "./auth-adapter";
+import { loadRootEnv } from "./root-env";
+
+// Auth.js reads the secret below at import time, before Next's own env loading applies.
+loadRootEnv();
 
 const authSecret = process.env.JWT_SECRET ?? process.env.AUTH_SECRET ?? (
   process.env.NODE_ENV === "development" ? "dev-only-secret-change-me" : undefined

@@ -10,6 +10,8 @@ const links = [
   ["FAQ", "/#faq"],
 ] as const;
 
+const platformUrl = (process.env.NEXT_PUBLIC_PLATFORM_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
 function Brand() {
   return (
     <Link href="/" aria-label="Cre8ive District home" className="shrink-0 text-lg font-extrabold tracking-[-0.08em] text-charcoal">
@@ -33,6 +35,9 @@ export function SiteHeader() {
               {label}
             </Link>
           ))}
+          <Link href={`${platformUrl}/sign-in`} className="rounded-md px-3 py-2 text-sm font-medium text-grey-600 transition-colors hover:text-charcoal">
+            Sign in
+          </Link>
           <Link href="/#waitlist" className="ml-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-orange px-5 text-sm font-bold text-charcoal transition-colors hover:bg-orange-hover">
             Join waitlist <span aria-hidden="true">→</span>
           </Link>
@@ -60,6 +65,9 @@ export function SiteHeader() {
           <Link href="/#waitlist" onClick={closeMenu} className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange px-5 font-bold text-charcoal">
             Join waitlist <span aria-hidden="true">→</span>
           </Link>
+          <a href={`${platformUrl}/sign-in`} onClick={closeMenu} className="inline-flex min-h-12 items-center justify-center rounded-full px-5 font-semibold text-grey-600">
+            Sign in
+          </a>
         </div>
       </nav>
     </header>

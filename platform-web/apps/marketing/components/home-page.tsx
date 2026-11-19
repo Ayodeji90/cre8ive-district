@@ -36,13 +36,13 @@ export function HomePage() {
         <div className="mx-auto flex w-full max-w-[72rem] flex-col items-center text-center">
           <AnimatedMascot />
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange/30 bg-orange-light px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-hover">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-orange" /> Launching soon
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-orange" /> In development
           </p>
           <h1 id="home-title" className="w-full min-w-0 max-w-[1120px] text-balance text-[clamp(2.5rem,6vw,5rem)] font-extrabold leading-[0.99] tracking-[-0.085em] text-charcoal">
             Turn your idea into a <em className="font-serif font-normal tracking-[-0.065em] text-orange">real business.</em>
           </h1>
           <p className="mx-auto mb-7 mt-5 w-full min-w-0 max-w-[700px] text-balance text-base font-medium leading-relaxed text-charcoal sm:text-lg">
-            Meet <span className="font-serif text-[1.12em] italic font-normal text-orange">Abija</span>, the AI employee who does all the work for you. We’re putting the finishing touches on the platform — join the waitlist for early access.
+            Meet <span className="font-serif text-[1.12em] italic font-normal text-orange">Abija</span>, your AI-assisted guide to shaping a brand and online presence. Cre8ive District is in development — join the waitlist for early access.
           </p>
           <div id="waitlist" className="w-full max-w-[640px] scroll-mt-28">
             <WaitlistForm id="waitlist-hero" source="hero" />
@@ -62,7 +62,7 @@ export function HomePage() {
       <section id="how-it-works" aria-labelledby="how-it-works-title" className="scroll-mt-24 px-6 py-20 md:px-8 md:py-28 lg:px-12">
         <div className="mx-auto max-w-[72rem]">
           <SectionHeading
-            eyebrow="From idea to launch"
+            eyebrow="The guided journey we’re building"
             title={<><span id="how-it-works-title">A clearer way to get your business started.</span></>}
             body="One guided process brings your brand, website, and launch essentials together."
           />
@@ -82,9 +82,9 @@ export function HomePage() {
       <section id="what-you-get" aria-labelledby="capabilities-title" className="scroll-mt-24 bg-grey-100/75 px-6 py-20 md:px-8 md:py-28 lg:px-12">
         <div className="mx-auto max-w-[72rem]">
           <SectionHeading
-            eyebrow="Made for your business"
+            eyebrow="Planned launch capabilities"
             title={<><span id="capabilities-title">A connected brand, from the first impression to the website.</span></>}
-            body="The platform is being built around the launch essentials African business owners need most."
+            body="These are the launch essentials we plan to bring together. They are in development and are not available to buy yet."
           />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {capabilities.map((item) => (
