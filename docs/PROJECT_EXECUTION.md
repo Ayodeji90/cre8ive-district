@@ -37,7 +37,7 @@ The main product path is partly connected: authenticated chat captures business 
 | Website Agent | Site specification, AI-copy provider path, template-based rendering, quality checker, persistent repository, Vercel deployer, health/readiness routes. | Validate live generation quality, deployment errors/redeploys/domains, and persistence under restart. Templates provide structure; this is not arbitrary code generation. |
 | Website jobs | PostgreSQL job state, tokenized deterministic enqueue, attempt/error metadata, periodic recovery, owner status/retry API, workspace diagnostics. Migration: a09c68f54b21. | Apply migration and test Redis outage, worker crash, stale recovery, duplicate enqueue, retries, owner UI, and no false “live” status. Not tested in this change. |
 | Run Engine | Persistent run/task/event state, PostgreSQL advisory locks, active-run recovery, pause/resume/cancel/approval, SSE, budget/permissions. | Non-stub execution currently creates reviewable draft artifacts; real website/social/outreach actions are not implemented. Add external action safety/idempotency if autonomous execution stays in scope. |
-| CI/contracts | Root GitHub Actions workflows define frontend lint/typecheck/test/build and backend API/agent/Run Engine/migration/Compose/Docker checks. Versioned branding intake/strategy schemas exist. | No Actions run exists yet for the pushed feature branch; GitHub rules and environments are unverified; frontend test scripts allow empty suites; release workflow has open safety defects listed below. |
+| CI/contracts | Root GitHub Actions workflows define frontend lint/typecheck/test/build and backend API/agent/Run Engine/migration/Compose/Docker checks. Versioned branding intake/strategy schemas exist. | PR #2 checks are running; GitHub rules and environments are unverified; frontend test scripts allow empty suites; release workflow has open safety defects listed below. |
 
 Implementation map: **platform-web/apps/** (web), **platform-web/api/app/** (API), **platform-web/api/app/worker.py** (worker), **platform-web/services/** (agents and Run Engine), **platform-web/contracts/** (shared schemas), **platform-web/docker-compose.yml** (local stack). Local startup and diagnosis: **docs/LOCAL_DEVELOPMENT.md**. Deployment: **docs/DEPLOYMENT.md**.
 
@@ -48,12 +48,12 @@ Implementation map: **platform-web/apps/** (web), **platform-web/api/app/** (API
 Live GitHub review on 20 November 2026:
 - `main` is at `4ad2bbe` after merging Branding Agent [PR #1](https://github.com/Ayodeji90/cre8ive-district/pull/1).
 - The remote feature branch was at `301efc2`, 10 commits ahead and 4 behind `main`. It is now integrated locally at `4fbd3d2` (11 commits ahead, 0 behind); the merge preserved the Branding Agent intake files and the feature branch's provider safeguards and tests.
-- No pull request exists yet, and no GitHub Actions run has checked the integrated tip. Opening the PR will trigger the configured checks.
+- Draft [PR #2](https://github.com/Ayodeji90/cre8ive-district/pull/2) is open against `main` at `ba057be`. At review, Compose config passed, frontend checks were running, backend checks were queued/running, and both Vercel preview statuses were pending.
 - Merged PR #1 reports a failed Vercel check for `app.cre8ivedistrict` and a successful check for `cre8ive_dist`; confirm the intended app deploy separately.
 - The merge conflicts in `.gitignore` and six Branding Agent files (`Dockerfile`, `pyproject.toml`, API app, config, stub provider, and provider factory test) have been resolved and reviewed. The Docker build now includes the merged service README.
 
 1. Review the complete feature diff for behavior that should be split or removed before merge.
-2. Push the integrated branch and open a pull request to `main`; require frontend and backend CI gates and review every status check before merge.
+2. Keep PR #2 in draft until the scope and CI failures are reviewed; then require frontend and backend CI gates and review every status check before merge.
 
 ### P0 — Make CI and release workflows safe to merge
 
