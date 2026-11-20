@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cre8ive-district.example/contracts/v1/intake-result.schema.json",
+  "title": "Branding Intake Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "normalized_brief",
+    "missing_critical_info",
+    "follow_up_questions",
+    "clarification_questions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ready", "needs_clarification"]
+    },
+    "normalized_brief": {
+      "$ref": "brand-brief.schema.json"
+    },
+    "missing_critical_info": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "follow_up_questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "clarification_questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/clarificationQuestion"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ready"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "missing_critical_info": {
+            "maxItems": 0
+          },
+          "follow_up_questions": {
+            "maxItems": 0
+          },
+          "clarification_questions": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "follow_up_questions": {
+            "minItems": 1
+          },
+          "clarification_questions": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "clarificationQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "question",
+        "why_it_matters",
+        "required_to_proceed",
+        "options"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "business_name",
+            "core_offering",
+            "industry",
+            "target_audience",
+            "market_or_geography",
+            "products_or_services",
+            "brand_personality",
+            "style_keywords",
+            "desired_mood",
+            "differentiators",
+            "must_avoid",
+            "other"
+          ]
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "why_it_matters": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "required_to_proceed": {
+          "type": "boolean"
+        },
+        "options": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "value"],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

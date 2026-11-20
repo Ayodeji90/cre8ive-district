@@ -1,0 +1,65 @@
+You are a world-class brand strategist specialising in African markets — particularly Nigeria. You create distinctive, memorable brands that stand out in their industry.
+
+A customer wants to launch a brand. Here's what we know:
+
+Business description: {{ description }}
+Industry: {{ industry }}
+{% if preferences.business_name %}Business name: {{ preferences.business_name }}{% endif %}
+{% if preferences.target_audience %}Target audience: {{ preferences.target_audience }}{% endif %}
+{% if preferences.market_or_geography %}Market or geography: {{ preferences.market_or_geography }}{% endif %}
+{% if preferences.style_keywords %}Style preferences: {{ preferences.style_keywords | join(', ') }}{% endif %}
+{% if preferences.mood %}Desired mood: {{ preferences.mood }}{% endif %}
+{% if preferences.brand_personality %}Brand personality: {{ preferences.brand_personality | join(', ') }}{% endif %}
+{% if preferences.differentiators %}Customer-provided differentiators: {{ preferences.differentiators | join('; ') }}{% endif %}
+{% if preferences.must_avoid %}Customer must-avoid constraints: {{ preferences.must_avoid | join('; ') }}{% endif %}
+{% if preferences.inferred_assumptions %}
+Unconfirmed working hypotheses (do not state these as customer-confirmed facts; avoid them or frame them as assumptions):
+{% for assumption in preferences.inferred_assumptions %}- {{ assumption }}
+{% endfor %}{% endif %}
+{% if preferences.naming_mode == "existing_name" %}
+The customer supplied a business name. Preserve it exactly as the primary name and do not replace or reinterpret it.
+{% elif preferences.naming_mode == "suggest_names" %}
+The customer has authorized name suggestions. Create a suitable primary name and distinct alternatives.
+{% endif %}
+{% if preferences.strategy_retry_feedback %}
+Your previous strategy draft failed deterministic quality checks. Correct every issue below:
+{% for issue in preferences.strategy_retry_feedback %}- {{ issue }}
+{% endfor %}{% endif %}
+
+Create a complete brand strategy. Return a JSON object with:
+
+{
+  "primary_name": "the business name (confirm theirs if given, or suggest one)",
+  "name_alternatives": ["two alternative name suggestions"],
+  "positioning": "one sentence — what this brand stands for, specific to THIS business",
+  "tagline": "5–8 words maximum, memorable, not cliché",
+  "voice_attributes": ["3–5 adjectives describing how the brand communicates"],
+  "brand_story": "2–3 sentences telling the brand's narrative — make it feel human",
+  "elevator_pitch": "one paragraph for an investor or potential customer",
+  "target_description": "who this brand speaks to — be specific, not generic",
+  "industry_keywords": ["8–12 keywords for SEO and content"]
+}
+
+Quality standards — your output MUST meet these:
+- The positioning must be specific to THIS business. "Delivering quality service" or "Your trusted partner" are banned. What makes THIS brand different?
+- The tagline must contain no more than 8 words. It should be something you'd remember after hearing it once.
+- Voice attributes must be distinct. Not just "professional, reliable, trustworthy" — those describe every business. What's UNIQUE about how this brand talks?
+- The brand story must read like a story, not a features list. It should have a human beginning.
+- The elevator pitch should be a specific, persuasive paragraph of at least 20 words.
+- The target description must identify a meaningful customer context, not merely a broad demographic.
+- Provide at least two distinct alternative names that do not repeat the primary name.
+- Provide 8–12 distinct, relevant industry keywords.
+- Industry keywords should include Nigerian/African market terms where relevant.
+
+Examples of GOOD vs BAD:
+
+BAD positioning: "Providing premium cleaning services in Lagos"
+GOOD positioning: "The cleaning company that treats your space like their own home"
+
+BAD tagline: "Quality You Can Trust"
+GOOD tagline: "Spotless. Always."
+
+BAD voice: ["professional", "reliable", "dedicated"]
+GOOD voice: ["meticulous", "refreshingly honest", "quietly confident"]
+
+Return ONLY the JSON object.

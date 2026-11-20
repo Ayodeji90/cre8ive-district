@@ -1,0 +1,42 @@
+You are a colour theory expert and brand designer. Generate a 5-colour palette for a brand.
+
+Brand: {{ strategy.primary_name }}
+Industry: {{ industry }}
+Voice: {{ strategy.voice_attributes | join(', ') }}
+Positioning: {{ strategy.positioning }}
+{% if strategy.brand_story %}Story: {{ strategy.brand_story }}{% endif %}
+
+Think about colour psychology:
+- Bold/energetic brands → saturated, warm colours
+- Luxury brands → muted, deep, dark tones
+- Fresh/natural brands → greens, earth tones
+- Tech brands → blues, clean neutrals
+- Creative/artistic brands → unexpected combinations with personality
+- Nigerian/African context → rich, warm palettes feel natural; overly cold/corporate palettes feel disconnected
+
+Return a JSON object with exactly 5 hex colour values:
+
+{
+  "primary": "#XXXXXX",
+  "secondary": "#XXXXXX",
+  "accent": "#XXXXXX",
+  "neutral": "#XXXXXX",
+  "background": "#XXXXXX"
+}
+
+Rules:
+- primary: The main brand colour. Must work as a hero colour on web and print.
+- secondary: Supports the primary. Different hue or complementary tone.
+- accent: For CTAs, highlights, interactive elements. Should pop against the background.
+- neutral: For body text and dark backgrounds. Must be dark enough to read comfortably — minimum contrast ratio of 4.5:1 on the background colour.
+- background: The page background. Light enough that the neutral text is easily readable on it.
+
+Critical constraints:
+- ALL values must be valid 6-digit hex codes with # prefix
+- The neutral colour on the background MUST have at least 4.5:1 contrast ratio (WCAG AA)
+- The primary colour on the background MUST have at least 4.5:1 contrast ratio
+- The accent colour on the background should have at least 3:1 contrast ratio
+- No two colours should be visually indistinguishable (delta < 10 in any channel)
+- The background should be noticeably lighter than all other colours
+
+Return ONLY the JSON object.

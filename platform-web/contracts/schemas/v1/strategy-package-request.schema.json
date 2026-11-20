@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cre8ive-district.example/contracts/v1/strategy-package-request.schema.json",
+  "title": "Brand Strategy Package Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "brief"],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "brief": {
+      "$ref": "brand-brief.schema.json"
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "brief": {
+          "properties": {
+            "core_offering": {
+              "properties": {
+                "source": {"not": {"const": "inferred"}}
+              },
+              "required": ["source"]
+            }
+          },
+          "required": ["core_offering"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "brief": {
+            "properties": {
+              "naming_mode": {"const": "existing_name"}
+            },
+            "required": ["naming_mode"]
+          }
+        },
+        "required": ["brief"]
+      },
+      "then": {
+        "properties": {
+          "brief": {
+            "properties": {
+              "business_name": {
+                "properties": {
+                  "source": {"not": {"const": "inferred"}}
+                },
+                "required": ["source"]
+              }
+            },
+            "required": ["business_name"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "brief": {
+            "properties": {
+              "naming_mode": {"const": "suggest_names"}
+            },
+            "required": ["naming_mode"]
+          }
+        },
+        "required": ["brief"]
+      },
+      "then": {
+        "properties": {
+          "brief": {
+            "properties": {
+              "business_name": {"type": "null"}
+            },
+            "required": ["business_name"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "brief": {
+          "properties": {
+            "naming_mode": {"not": {"const": "needs_name_choice"}}
+          },
+          "required": ["naming_mode"]
+        }
+      }
+    }
+  ]
+}

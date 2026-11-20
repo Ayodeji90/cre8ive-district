@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cre8ive-district.example/contracts/v1/brand-brief.schema.json",
+  "title": "Normalized Brand Brief",
+  "description": "Canonical versioned brief exchanged with Branding Agent workflows. This is a brand brief, not the generated brand package.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "business_id",
+    "business_name",
+    "core_offering",
+    "industry",
+    "target_audience",
+    "market_or_geography",
+    "products_or_services",
+    "brand_personality",
+    "style_keywords",
+    "desired_mood",
+    "differentiators",
+    "must_avoid",
+    "naming_mode"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "business_id": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "business_name": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "core_offering": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "industry": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "target_audience": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "market_or_geography": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "products_or_services": {
+      "$ref": "#/$defs/trackedFactList"
+    },
+    "brand_personality": {
+      "$ref": "#/$defs/trackedFactList"
+    },
+    "style_keywords": {
+      "$ref": "#/$defs/trackedFactList"
+    },
+    "desired_mood": {
+      "$ref": "#/$defs/trackedFactOrNull"
+    },
+    "differentiators": {
+      "$ref": "#/$defs/trackedFactList"
+    },
+    "must_avoid": {
+      "$ref": "#/$defs/trackedFactList"
+    },
+    "naming_mode": {
+      "type": "string",
+      "enum": ["existing_name", "suggest_names", "needs_name_choice"]
+    }
+  },
+  "$defs": {
+    "trackedFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source", "evidence", "rationale"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "maxLength": 2000
+        },
+        "source": {
+          "type": "string",
+          "enum": ["structured_input", "unstructured_input", "conversation", "inferred"]
+        },
+        "evidence": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 1000
+        },
+        "rationale": {
+          "type": ["string", "null"],
+          "pattern": ".*\\S.*",
+          "maxLength": 1000
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "enum": ["unstructured_input", "conversation"]
+              }
+            },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": ".*\\S.*"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "inferred"
+              }
+            },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": {
+              "rationale": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": ".*\\S.*"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "enum": ["structured_input", "unstructured_input", "conversation"]
+              }
+            },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": {
+              "rationale": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "trackedFactOrNull": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/trackedFact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trackedFactList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/trackedFact"
+      }
+    }
+  }
+}
