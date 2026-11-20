@@ -106,6 +106,9 @@ jobs:
     needs: [lint, typecheck, test, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Fail if any job failed or was cancelled
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
