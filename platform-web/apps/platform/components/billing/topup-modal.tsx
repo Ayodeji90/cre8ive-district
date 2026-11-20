@@ -90,7 +90,7 @@ export function TopUpModal({
         {/* Modal Header */}
         <div className="text-center sm:text-left">
           <span className="text-[11px] font-extrabold uppercase tracking-widest text-orange">
-            Fuel Abija's Autonomous Engine
+            Fuel Abija&apos;s Autonomous Engine
           </span>
           <h2 className="mt-1 text-2xl font-black tracking-tight text-charcoal">
             Top Up Credits

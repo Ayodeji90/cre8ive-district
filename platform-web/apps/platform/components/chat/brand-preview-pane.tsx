@@ -25,7 +25,6 @@ export function BrandPreviewPane({
 }: BrandPreviewPaneProps) {
   const brandName = context.business_name || "Your Brand Name";
   const industry = context.industry || "African Commerce";
-  const audience = context.target_audience || "Modern African consumers";
   const mood = context.mood || "Warm, Confident & Distinctive";
   const isReady = Boolean(context.ready_to_generate);
 
