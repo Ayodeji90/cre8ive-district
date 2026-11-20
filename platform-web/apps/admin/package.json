@@ -21,6 +21,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@next/env": "15.5.29",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
