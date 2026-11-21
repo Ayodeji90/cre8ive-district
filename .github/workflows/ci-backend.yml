@@ -50,36 +50,10 @@ jobs:
     defaults:
       run:
         working-directory: platform-web/api
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: cre8ive_test
-          POSTGRES_USER: cre8ive
-          POSTGRES_PASSWORD: testpass
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U cre8ive -d cre8ive_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
     env:
-      DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_test"
-      REDIS_URL: "redis://localhost:6379"
       AI_STUB: "true"
       ENV: "test"
-      BRANDING_AGENT_URL: "http://localhost:8001"
-      BRANDING_AGENT_API_KEY: "ci-test-key"
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -88,7 +62,21 @@ jobs:
           cache: pip
           cache-dependency-path: platform-web/api/pyproject.toml
       - run: pip install ".[dev]"
-      - run: python -m pytest --tb=short -q
+      - name: Run tests with progress and periodic stack traces
+        run: |
+          python - <<'PY'
+          import faulthandler
+
+          faulthandler.dump_traceback_later(180, repeat=True)
+          result = 1
+          try:
+              import pytest
+
+              result = pytest.main(["-vv", "-ra", "--tb=short", "--durations=20"])
+          finally:
+              faulthandler.cancel_dump_traceback_later()
+          raise SystemExit(result)
+          PY
 
   # ── Migrations (Postgres, forward-only) ───────────────────────────
   migrations:
@@ -138,6 +126,88 @@ jobs:
         run: alembic upgrade head
       - name: Models match migrations
         run: alembic check
+      - name: Create database for legacy Run Engine schema
+        run: |
+          python - <<'PY'
+          import asyncio
+
+          import asyncpg
+
+          async def main():
+              connection = await asyncpg.connect(
+                  user="cre8ive",
+                  password="testpass",
+                  database="postgres",
+                  host="localhost",
+              )
+              try:
+                  await connection.execute("CREATE DATABASE cre8ive_legacy")
+              finally:
+                  await connection.close()
+
+          asyncio.run(main())
+          PY
+      - name: Reproduce Run Engine startup before migrations
+        working-directory: .
+        env:
+          DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_legacy"
+          PYTHONPATH: platform-web/services/run-engine/src
+        run: |
+          python - <<'PY'
+          import asyncio
+          import os
+
+          from sqlalchemy import text
+          from sqlalchemy.ext.asyncio import create_async_engine
+          from run_engine.persistence.models import Base
+
+          async def main():
+              engine = create_async_engine(os.environ["DATABASE_URL"])
+              async with engine.begin() as connection:
+                  await connection.run_sync(Base.metadata.create_all)
+                  await connection.execute(text("ALTER TABLE run_engine_events RENAME TO run_events"))
+              await engine.dispose()
+
+          asyncio.run(main())
+          PY
+      - name: Upgrade legacy Run Engine schema
+        working-directory: platform-web/api
+        env:
+          DATABASE_URL: "postgresql+asyncpg://cre8ive:testpass@localhost:5432/cre8ive_legacy"
+        run: |
+          alembic upgrade head
+          alembic upgrade head
+          python - <<'PY'
+          import asyncio
+          import os
+
+          from sqlalchemy import inspect
+          from sqlalchemy.ext.asyncio import create_async_engine
+
+          async def main():
+              engine = create_async_engine(os.environ["DATABASE_URL"])
+              async with engine.connect() as connection:
+                  table_names = await connection.run_sync(
+                      lambda conn: set(inspect(conn).get_table_names())
+                  )
+                  assert {"run_events", "run_engine_events"} <= table_names
+                  api_event_columns = await connection.run_sync(
+                      lambda conn: {
+                          column["name"] for column in inspect(conn).get_columns("run_events")
+                      }
+                  )
+                  engine_event_columns = await connection.run_sync(
+                      lambda conn: {
+                          column["name"]
+                          for column in inspect(conn).get_columns("run_engine_events")
+                      }
+                  )
+                  assert "agent_run_id" in api_event_columns
+                  assert "run_id" in engine_event_columns
+              await engine.dispose()
+
+          asyncio.run(main())
+          PY
 
   # ── Branding Agent ────────────────────────────────────────────────
   branding-agent-lint:
@@ -305,7 +375,7 @@ jobs:
 
   # ── Single required check for branch protection ───────────────────
   ci-gate:
-    name: "CI gate"
+    name: "Backend CI gate"
     if: always()
     needs:
       - api-lint
@@ -322,10 +392,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail if any job failed or was cancelled
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+      - name: Report job failures, cancellations, and skips
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "One or more CI jobs did not succeed."
-          echo '${{ toJSON(needs) }}'
-          exit 1
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          jobs = json.loads(os.environ["NEEDS_JSON"])
+          failed = {
+              name: details["result"]
+              for name, details in jobs.items()
+              if details["result"] in {"failure", "cancelled"}
+          }
+          skipped = [
+              name for name, details in jobs.items() if details["result"] == "skipped"
+          ]
+
+          for name, result in failed.items():
+              print(f"::error title=CI job {result}::{name} finished with {result}.")
+          if skipped:
+              print("::error title=CI jobs skipped::" + ", ".join(skipped))
+          print(
+              "Open the named job in this workflow run to see its failing step "
+              "or the API test's last test and stack trace."
+          )
+          sys.exit(1)
+          PY
       - run: echo "All backend checks passed."

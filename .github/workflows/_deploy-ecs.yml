@@ -25,8 +25,20 @@ on:
         description: GitHub environment, also the AWS target.
         required: true
         type: string
-      image_tag:
-        description: Immutable image tag (for example sha-1a2b3c4d5e6f).
+      api_digest:
+        description: Registry digest of the API image.
+        required: true
+        type: string
+      branding_agent_digest:
+        description: Registry digest of the Branding Agent image.
+        required: true
+        type: string
+      website_agent_digest:
+        description: Registry digest of the Website Agent image.
+        required: true
+        type: string
+      run_engine_digest:
+        description: Registry digest of the Run Engine image.
         required: true
         type: string
       run_migrations:
@@ -37,7 +49,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-${{ inputs.environment }}
@@ -50,12 +61,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       aws_role_arn: ${{ steps.export.outputs.aws_role_arn }}
       aws_region: ${{ steps.export.outputs.aws_region }}
       cluster: ${{ steps.export.outputs.cluster }}
       public_base_url: ${{ steps.export.outputs.public_base_url }}
       image_prefix: ${{ steps.export.outputs.image_prefix }}
+      image_api: ${{ steps.export.outputs.image_api }}
+      image_worker: ${{ steps.export.outputs.image_worker }}
+      image_branding: ${{ steps.export.outputs.image_branding }}
+      image_website: ${{ steps.export.outputs.image_website }}
+      image_runengine: ${{ steps.export.outputs.image_runengine }}
       subnets: ${{ steps.export.outputs.subnets }}
       security_groups: ${{ steps.export.outputs.security_groups }}
       assign_public_ip: ${{ steps.export.outputs.assign_public_ip }}
@@ -96,6 +115,10 @@ jobs:
           ECS_TASKDEF_RUNENGINE: ${{ vars.ECS_TASKDEF_RUNENGINE }}
           ECS_ASSIGN_PUBLIC_IP: ${{ vars.ECS_ASSIGN_PUBLIC_IP }}
           ECS_API_CONTAINER: ${{ vars.ECS_API_CONTAINER }}
+          API_DIGEST: ${{ inputs.api_digest }}
+          BRANDING_AGENT_DIGEST: ${{ inputs.branding_agent_digest }}
+          WEBSITE_AGENT_DIGEST: ${{ inputs.website_agent_digest }}
+          RUN_ENGINE_DIGEST: ${{ inputs.run_engine_digest }}
         run: |
           missing=0
           for name in \
@@ -115,12 +138,31 @@ jobs:
             exit 1
           fi
 
+          for pair in \
+            "api:$API_DIGEST" \
+            "branding-agent:$BRANDING_AGENT_DIGEST" \
+            "website-agent:$WEBSITE_AGENT_DIGEST" \
+            "run-engine:$RUN_ENGINE_DIGEST"; do
+            name="${pair%%:*}"
+            digest="${pair#*:}"
+            if ! [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::Missing or invalid image digest for $name"
+              exit 1
+            fi
+          done
+
+          image_prefix=$(printf 'ghcr.io/%s/cre8ive' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           {
             echo "aws_role_arn=$AWS_ROLE_ARN"
             echo "aws_region=$AWS_REGION"
             echo "cluster=$ECS_CLUSTER"
             echo "public_base_url=$PUBLIC_BASE_URL"
-            echo "image_prefix=$(printf 'ghcr.io/%s/cre8ive' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+            echo "image_prefix=$image_prefix"
+            echo "image_api=$image_prefix-api@$API_DIGEST"
+            echo "image_worker=$image_prefix-api@$API_DIGEST"
+            echo "image_branding=$image_prefix-branding-agent@$BRANDING_AGENT_DIGEST"
+            echo "image_website=$image_prefix-website-agent@$WEBSITE_AGENT_DIGEST"
+            echo "image_runengine=$image_prefix-run-engine@$RUN_ENGINE_DIGEST"
             echo "subnets=$ECS_SUBNETS"
             echo "security_groups=$ECS_SECURITY_GROUPS"
             echo "assign_public_ip=${ECS_ASSIGN_PUBLIC_IP:-DISABLED}"
@@ -177,6 +219,9 @@ jobs:
     if: inputs.run_migrations
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
@@ -193,7 +238,7 @@ jobs:
           service: ${{ needs.preflight.outputs.svc_api }}
           task_definition: ${{ needs.preflight.outputs.td_api }}
           container: ${{ needs.preflight.outputs.api_container }}
-          image: ${{ needs.preflight.outputs.image_prefix }}-api:${{ inputs.image_tag }}
+          image: ${{ needs.preflight.outputs.image_api }}
           wait: "false"
           update_service: "false"
 
@@ -256,6 +301,9 @@ jobs:
       (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -264,22 +312,22 @@ jobs:
             service_output: svc_branding
             taskdef_output: td_branding
             container: branding-agent
-            image: branding-agent
+            image_output: image_branding
           - name: website-agent
             service_output: svc_website
             taskdef_output: td_website
             container: website-agent
-            image: website-agent
+            image_output: image_website
           - name: run-engine
             service_output: svc_runengine
             taskdef_output: td_runengine
             container: run-engine
-            image: run-engine
+            image_output: image_runengine
           - name: worker
             service_output: svc_worker
             taskdef_output: td_worker
             container: api
-            image: api
+            image_output: image_worker
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
@@ -293,7 +341,7 @@ jobs:
           service: ${{ needs.preflight.outputs[matrix.service_output] }}
           task_definition: ${{ needs.preflight.outputs[matrix.taskdef_output] }}
           container: ${{ matrix.container }}
-          image: ${{ needs.preflight.outputs.image_prefix }}-${{ matrix.image }}:${{ inputs.image_tag }}
+          image: ${{ needs.preflight.outputs[matrix.image_output] }}
 
   # ── API last, once its dependencies are healthy ──────────────────
   deploy-api:
@@ -305,6 +353,9 @@ jobs:
       needs.deploy-agents.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
@@ -318,7 +369,7 @@ jobs:
           service: ${{ needs.preflight.outputs.svc_api }}
           task_definition: ${{ needs.preflight.outputs.td_api }}
           container: ${{ needs.preflight.outputs.api_container }}
-          image: ${{ needs.preflight.outputs.image_prefix }}-api:${{ inputs.image_tag }}
+          image: ${{ needs.preflight.outputs.image_api }}
 
   # ── Smoke test the public API, which checks the agents internally ─
   smoke:
@@ -367,6 +418,9 @@ jobs:
       needs.deploy-agents.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -426,7 +480,7 @@ jobs:
       - name: Report
         if: always()
         run: |
-          echo "::warning::Deploy of ${{ inputs.image_tag }} to ${{ inputs.environment }} failed; previous task definitions were restored."
+          echo "::warning::Deployment of digest-pinned images to ${{ inputs.environment }} failed; previous task definitions were restored."
           echo "Targets were:"
           echo "  api:        ${{ needs.preflight.outputs.previous_api }}"
           echo "  worker:     ${{ needs.preflight.outputs.previous_worker }}"

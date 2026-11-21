@@ -1,11 +1,11 @@
 name: "Rollback · Backend"
 
-# Redeploys the previous immutable image tag to an ECS environment.
+# Redeploys the previous immutable image digests to an ECS environment.
 # Migrations are intentionally not run: rollback is forward-only at the
 # database level. See docs/DEPLOYMENT.md for the expand/contract rule.
 #
-# Find the tag in the failed "Deploy · Backend" run summary or in GHCR
-# (images are tagged sha-<first 12 of the commit>).
+# Copy all four digests from the successful release's "Deploy · Backend"
+# run summary. This keeps the API, agents, and Run Engine on one release.
 
 on:
   workflow_dispatch:
@@ -15,14 +15,25 @@ on:
         required: true
         type: choice
         options: [staging, production]
-      image_tag:
-        description: Previously deployed tag, for example sha-1a2b3c4d5e6f.
+      api_digest:
+        description: Previously deployed API image digest (sha256:...).
+        required: true
+        type: string
+      branding_agent_digest:
+        description: Previously deployed Branding Agent image digest (sha256:...).
+        required: true
+        type: string
+      website_agent_digest:
+        description: Previously deployed Website Agent image digest (sha256:...).
+        required: true
+        type: string
+      run_engine_digest:
+        description: Previously deployed Run Engine image digest (sha256:...).
         required: true
         type: string
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-backend
@@ -31,8 +42,14 @@ concurrency:
 jobs:
   rollback:
     name: "Rollback · ${{ inputs.environment }}"
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/_deploy-ecs.yml
     with:
       environment: ${{ inputs.environment }}
-      image_tag: ${{ inputs.image_tag }}
+      api_digest: ${{ inputs.api_digest }}
+      branding_agent_digest: ${{ inputs.branding_agent_digest }}
+      website_agent_digest: ${{ inputs.website_agent_digest }}
+      run_engine_digest: ${{ inputs.run_engine_digest }}
       run_migrations: false

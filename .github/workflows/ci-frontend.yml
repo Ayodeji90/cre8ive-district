@@ -101,7 +101,7 @@ jobs:
       - run: pnpm build
 
   ci-gate:
-    name: "CI gate"
+    name: "Frontend CI gate"
     if: always()
     needs: [lint, typecheck, test, build]
     runs-on: ubuntu-latest

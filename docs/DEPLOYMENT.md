@@ -16,25 +16,31 @@ R2. The frontend stays on Vercel.
 ## Release flow
 
 ```
-pull request ──► CI · Backend (no secrets) ──► required check "CI gate"
+pull request ──► CI · Frontend ──► Frontend CI gate
+             └─► CI · Backend  ──► Backend CI gate
 merge to main ──► CI · Backend ──► Deploy · Backend
-                                  ├─ build + push sha-<12> images (4)
+                                  ├─ build + push four images after CI passes
+                                  ├─ capture each registry digest
                                   ├─ staging: preflight, migrate, agents, api, smoke
                                   └─ production: approval, preflight, migrate, agents, api, smoke
 ```
 
-Two rules make this safe:
+Images are deployed as `ghcr.io/<owner>/cre8ive-<service>@sha256:...`
+references, not tags. The build also publishes a commit-derived tag for
+discovery, but deployment and rollback use the captured digests.
 
-1. **Images are only published when CI succeeds.** `deploy-backend.yml` is
-   triggered by `workflow_run` on `CI · Backend` and refuses to run unless the
-   conclusion is `success` for a `push` to `main`. PRs never reach the
-   registry.
-2. **Production cannot start without approval.** The `production` GitHub
-   Environment must have required reviewers and a `main` branch restriction.
-   The job pauses before it obtains AWS credentials.
+Automatic release runs only after successful backend CI for a push to `main`.
+Manual **Deploy · Backend** dispatch is staging-only and independently checks
+that the selected ref has a successful backend CI push run on `main`. Images
+are not published by pull-request checks.
 
-Images are tagged `sha-<first 12 characters of the commit>`. There is no
-`latest` tag; every deploy names an immutable digest.
+Production runs only after staging succeeds and requires approval through the
+`production` GitHub Environment. Configure that environment with the chosen
+reviewers and a `main` branch restriction before relying on this gate. Likewise,
+configure `main` branch protection/rulesets to require `Frontend CI gate`,
+`Backend CI gate`, and the team's chosen PR approval count. At the time of this
+review, the repository had no branch protection/rulesets or GitHub environments,
+so these controls are not yet active.
 
 If a merged commit touches no backend paths, `preflight` sets `deploy=false`
 and no images are built or rolled. The first time you merge this pipeline, the
@@ -47,7 +53,8 @@ and no images are built or rolled. The first time you merge this pipeline, the
    - Provider URL: `https://token.actions.githubusercontent.com`
    - Audience: `sts.amazonaws.com`
 2. **Deploy role** assumed by the workflows (`AWS_ROLE_ARN`). Trust policy
-   restricted to this repository and the `staging`/`production` environments:
+   restricted to this repository and the `staging`/`production` environments.
+   The workflow grants `id-token: write` only to jobs that need AWS credentials:
 
    ```json
    {
@@ -178,11 +185,16 @@ agents, and waits for each service to stabilize.
 **Manual.** Run **Actions → Rollback · Backend** with:
 
 - `environment`: `staging` or `production`
-- `image_tag`: the previous `sha-...` tag
+- `api_digest`
+- `branding_agent_digest`
+- `website_agent_digest`
+- `run_engine_digest`
 
-That re-registers and rolls the previous image with `run_migrations: false`.
-A production manual rollback still passes through the protected environment, so
-it asks for approval once; the automatic rollback above does not.
+Copy all four `sha256:...` values from the release run summary for the desired
+version. The workflow re-registers and rolls those digest-pinned images with
+`run_migrations: false`. A production manual rollback passes through the
+`production` environment and requires its configured approval; automatic
+rollback restores the task definitions captured before deployment.
 
 **Emergency CLI fallback:**
 
@@ -214,6 +226,7 @@ cd platform-web && make lint && make test
 ```
 
 The first real release requires the AWS resources above. Until the `staging`
-environment variables are set, the deploy preflight fails before any ECS
-service is touched; images may already have been built and pushed (they are
-immutable and harmless).
+environment variables and GitHub environment protections are configured, the
+deploy preflight will fail before any ECS service is touched; images may already
+have been built and pushed, but deployments continue to reference their immutable
+digests.
