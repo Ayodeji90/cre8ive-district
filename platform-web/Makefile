@@ -23,7 +23,8 @@ revision:
 	cd api && alembic revision --autogenerate -m "$(m)"
 
 status:
-	$(COMPOSE) ps
+	$(COMPOSE) ps -a
+	./scripts/doctor.sh
 
 doctor:
 	./scripts/doctor.sh
@@ -51,10 +52,10 @@ run-engine:
 	cd services/run-engine && PYTHONPATH=src uvicorn run_engine.api.app:app --reload --port 8003
 
 test:
-	cd api && python -m pytest
-	cd services/branding-agent && PYTHONPATH=src python -m pytest
-	cd services/website-agent && PYTHONPATH=src python -m pytest
-	cd services/run-engine && PYTHONPATH=src python -m pytest
+	cd api && python3 -m pytest
+	cd services/branding-agent && PYTHONPATH=src python3 -m pytest
+	cd services/website-agent && PYTHONPATH=src python3 -m pytest
+	cd services/run-engine && PYTHONPATH=src python3 -m pytest
 
 lint:
 	cd api && ruff check . && ruff format --check .

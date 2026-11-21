@@ -10,8 +10,19 @@ cp .env.example .env          # once; then fill JWT_SECRET and any provider keys
 cd platform-web
 make up                       # build + start everything in dependency order
 make doctor-wait              # wait up to 120s for every check to pass
-make doctor                   # PASS/FAIL report per service, dependency, and key
+make status                   # container table plus dependency diagnosis and failing-service logs
 ```
+
+For a clean local database, use a fresh Compose project name rather than deleting
+the existing database volume:
+
+```bash
+docker compose -p cre8ive-clean up -d --build
+docker compose -p cre8ive-clean exec api alembic current
+```
+
+Use the same `-p cre8ive-clean` option with `docker compose` commands for this
+stack. `make status` and `make doctor` use the default project name.
 
 `make up` starts services in this order:
 
@@ -20,11 +31,11 @@ postgres, redis
       │
       ▼
    migrate            # alembic upgrade head, must exit 0
-      │
+      ├──────────────► run-engine
       ├──────────────► api        (waits for migrate + all agents)
-      └──────────────► worker     (waits for migrate + all agents)
+      └──────────────► worker     (waits for migrate + required agents)
 
-branding-agent, website-agent, run-engine   (start in parallel, healthchecked)
+branding-agent, website-agent   (start independently, healthchecked)
 ```
 
 `api` is held back until every agent is `healthy`, so a request cannot reach a
@@ -36,8 +47,8 @@ half-started stack. If `migrate` fails, `api` and `worker` never start.
 | --- | --- |
 | `make up` | Build and start the full stack in the background |
 | `make infra` | Postgres + Redis only (for running `make dev` on the host) |
-| `make status` | `docker compose ps` table |
-| `make doctor` | Full diagnosis: prerequisites, env, container health, endpoints, service keys, `/health/deps` |
+| `make status` | `docker compose ps -a` plus the full doctor report and logs for unhealthy services |
+| `make doctor` | Full diagnosis: prerequisites, env, restart counts, container health, endpoints, service keys, `/health/deps` |
 | `make doctor-wait` | Same report, polling for up to 120s (CI-like gate) |
 | `make logs` | Follow all logs |
 | `make down` | Stop and remove containers (keeps the Postgres volume) |
@@ -48,7 +59,7 @@ half-started stack. If `migrate` fails, `api` and `worker` never start.
 | Endpoint | Checks | Use |
 | --- | --- | --- |
 | `GET :8000/health` | Process is up | Liveness, ALB target |
-| `GET :8000/health/db` | Postgres round-trip | API container healthcheck |
+| `GET :8000/health/db` | Postgres round-trip | Database-only diagnosis |
 | `GET :8000/health/deps` | Postgres, Redis, and the authenticated `/v1/ping` of each agent | Chat-start diagnosis and deploy smoke |
 | `GET :8001/health` | Branding Agent process | Compose healthcheck |
 | `GET :8002/health` | Website Agent process | Compose healthcheck |
@@ -79,9 +90,16 @@ Run `make doctor` first; it checks all of these.
 ## Notes
 
 - Compose healthchecks use Python's `urllib` because the slim images do not ship `curl`.
-- The `api` and `worker` containers mount `./api`, so code changes need no rebuild; the API
-  reloads automatically, while the worker needs `docker compose restart worker`. Dependency
-  changes require `make up` (it rebuilds) or `docker compose build`.
+- The API container's readiness check is `/health/deps`; it remains unhealthy if Postgres,
+  Redis, or an agent's authenticated `/v1/ping` fails. `/health` remains a liveness check.
+- The `api` and `worker` containers mount `./api`, and Run Engine mounts its `src` directory,
+  so code changes need no rebuild; the API reloads automatically, while the worker and Run
+  Engine need a container restart. Dependency changes require `make up` (it rebuilds) or
+  `docker compose build`.
 - `migrate` also mounts `./api`, so it applies the migrations in your working tree.
+- Run Engine starts after migrations and stores its events in `run_engine_events`;
+  the API owns `run_events`.
+- Without R2 credentials, development/test uses non-persistent `local://` storage URLs.
+  Configure R2 for real asset uploads and downloads.
 - The Postgres volume persists across `make down`. Use `docker compose down -v` for a clean
   database.

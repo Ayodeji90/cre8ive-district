@@ -2,6 +2,7 @@ import json
 import uuid
 from decimal import Decimal
 
+import httpx
 import pytest
 from sqlalchemy import select
 
@@ -111,6 +112,26 @@ async def test_health_deps_is_503_when_a_dependency_is_down(client, monkeypatch)
     assert response.status_code == 503
     assert response.json()["status"] == "degraded"
     assert response.json()["dependencies"]["redis"]["status"] == "error"
+
+
+async def test_agent_readiness_sends_service_key_and_rejects_unauthorized_ping():
+    from app.routers.health import _check_http
+
+    def reject_agent_key(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/ping"
+        assert request.headers["X-Agent-Key"] == "test-agent-key"
+        return httpx.Response(401, json={"detail": "Invalid or missing service key"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(reject_agent_key)) as client:
+        result = await _check_http(
+            client,
+            "branding-agent",
+            "http://branding-agent:8000",
+            "test-agent-key",
+        )
+
+    assert result["status"] == "error"
+    assert result["http_status"] == 401
 
 
 async def test_me_requires_token(client):

@@ -2,7 +2,8 @@
 #
 # Startup order is explicit so a broken dependency fails loudly instead of
 # producing a half-started stack:
-#   postgres/redis -> migrate -> {api, worker} -> agents
+#   postgres/redis -> migrate -> run-engine
+#   api and worker wait for migrations and their required agents
 # Run `make status` for a per-service health table and `make doctor` for
 # dependency-level diagnosis (including the config checks behind chat start).
 
@@ -125,13 +126,18 @@ services:
       PLATFORM_API_URL: http://api:8000
       BRANDING_AGENT_URL: http://branding-agent:8000
       WEBSITE_AGENT_URL: http://website-agent:8000
+      PYTHONPATH: /app/src
     ports:
       - "8003:8002"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./services/run-engine/src:/app/src
     healthcheck:
       test:
         - CMD
@@ -180,7 +186,7 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/db', timeout=2)"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/deps', timeout=2)"
       <<: *python-healthcheck
     restart: unless-stopped
 
@@ -198,6 +204,7 @@ services:
       WEBSITE_AGENT_API_KEY: ${WEBSITE_AGENT_API_KEY:-local-development-key}
       SERVICE_API_KEY: ${SERVICE_API_KEY:-local-development-key}
       ENV: ${ENV:-development}
+      PYTHONPATH: /app
     depends_on:
       migrate:
         condition: service_completed_successfully

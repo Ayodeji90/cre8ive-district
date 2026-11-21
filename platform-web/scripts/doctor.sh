@@ -155,24 +155,48 @@ check_stack() {
     fail "no containers found (start with: make up)"
     return 1
   fi
-  printf '  %-16s %-12s %s\n' "SERVICE" "STATE" "HEALTH"
+  printf '  %-16s %-16s %-12s %s\n' "SERVICE" "STATE" "HEALTH" "RESTARTS"
   while IFS='|' read -r svc state health; do
     [ -z "$svc" ] && continue
     [ -z "$health" ] && health="-"
+    local container_id restart_count display_state
+    container_id=$(compose ps -aq "$svc" 2>/dev/null | sed -n '1p')
+    restart_count=""
+    if [ -n "$container_id" ]; then
+      restart_count=$(docker inspect --format '{{.RestartCount}}' "$container_id" 2>/dev/null)
+    fi
+    display_state="$state"
+    if [[ "$restart_count" =~ ^[0-9]+$ ]]; then
+      if [ "$restart_count" -ge 3 ]; then
+        # A few restarts may be deliberate; repeated automatic restarts indicate a loop.
+        display_state="restart-loop"
+        fail "$svc has restarted $restart_count times; inspect its recent logs"
+      elif [ "$restart_count" -gt 0 ]; then
+        warn "$svc has restarted $restart_count time(s); inspect its recent logs"
+      fi
+    else
+      restart_count="unknown"
+      display_state="inspect-failed"
+      fail "$svc restart count could not be inspected"
+    fi
+    if [ "$display_state" = "restart-loop" ]; then
+      printf '  %-16s %-16s %-12s %s\n' "$svc" "$display_state" "$health" "$restart_count"
+      continue
+    fi
     if [ "$state" = "running" ] && { [ "$health" = "healthy" ] || [ "$health" = "-" ]; }; then
-      printf '  %-16s %-12s %s\n' "$svc" "$state" "$health"
+      printf '  %-16s %-16s %-12s %s\n' "$svc" "$display_state" "$health" "$restart_count"
     elif [ "$state" = "exited" ] && [ "$svc" = "migrate" ] && [ "$health" = "-" ]; then
       # The migration gate is expected to exit 0.
       local exit_code
       exit_code=$(docker inspect --format '{{.State.ExitCode}}' "$(compose ps -aq "$svc" 2>/dev/null)" 2>/dev/null)
       if [ "${exit_code:-1}" = "0" ]; then
-        printf '  %-16s %-12s %s\n' "$svc" "$state (ok)" "$health"
+        printf '  %-16s %-16s %-12s %s\n' "$svc" "$state (ok)" "$health" "$restart_count"
       else
-        printf '  %-16s %-12s %s\n' "$svc" "$state ($exit_code)" "$health"
+        printf '  %-16s %-16s %-12s %s\n' "$svc" "$state ($exit_code)" "$health" "$restart_count"
         fail "$svc exited with code $exit_code"
       fi
     else
-      printf '  %-16s %-12s %s\n' "$svc" "$state" "$health"
+      printf '  %-16s %-16s %-12s %s\n' "$svc" "$display_state" "$health" "$restart_count"
       fail "$svc is $state (health: $health)"
     fi
   done <<< "$rows"
@@ -240,13 +264,28 @@ check_stack() {
 
   if [ "$FAILURES" -gt 0 ]; then
     heading "Recent logs for failing services"
-    compose ps -a --format '{{.Service}}|{{.State}}|{{.Health}}' 2>/dev/null \
-      | awk -F'|' '$2 != "running" && $1 != "migrate" || ($2 == "running" && $3 != "healthy" && $3 != "") { print $1 }' \
-      | while read -r svc; do
-          [ -z "$svc" ] && continue
+    compose ps -a --format '{{.Service}}|{{.State}}|{{.Health}}' 2>/dev/null |
+      while IFS='|' read -r svc state health; do
+        [ -z "$svc" ] && continue
+        local container_id restart_count should_log
+        container_id=$(compose ps -aq "$svc" 2>/dev/null | sed -n '1p')
+        restart_count=0
+        if [ -n "$container_id" ]; then
+          restart_count=$(docker inspect --format '{{.RestartCount}}' "$container_id" 2>/dev/null)
+        fi
+        should_log=false
+        if [ "$state" != "running" ] && [ "$svc" != "migrate" ]; then
+          should_log=true
+        elif [ "$state" = "running" ] && [ -n "$health" ] && [ "$health" != "healthy" ]; then
+          should_log=true
+        elif [[ "$restart_count" =~ ^[0-9]+$ ]] && [ "$restart_count" -ge 3 ]; then
+          should_log=true
+        fi
+        if [ "$should_log" = true ]; then
           printf '\n  --- %s (last 40 lines) ---\n' "$svc"
           compose logs --tail=40 "$svc" 2>&1 | sed 's/^/  /'
-        done
+        fi
+      done
   fi
 
   [ "$FAILURES" -eq 0 ]

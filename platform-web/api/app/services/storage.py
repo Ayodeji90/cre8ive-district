@@ -33,6 +33,20 @@ class Storage(Protocol):
     def public_url(self, path: str) -> str: ...
 
 
+class LocalStorage:
+    def public_url(self, path: str) -> str:
+        return f"local://{path.lstrip('/')}"
+
+    async def upload_bytes(self, path: str, data: bytes, content_type: str) -> str:
+        return self.public_url(path)
+
+    async def presigned_url(self, path: str, expires_in: int = 7 * 24 * 3600) -> str:
+        return self.public_url(path)
+
+    async def delete(self, path: str) -> None:
+        return None
+
+
 class R2Storage:
     def __init__(self, settings: Settings) -> None:
         self.bucket = settings.R2_BUCKET
@@ -93,7 +107,9 @@ class R2Storage:
 
 def build_storage(settings: Settings) -> Storage:
     if not (settings.R2_ENDPOINT and settings.R2_ACCESS_KEY and settings.R2_SECRET_KEY):
-        raise StorageNotConfigured
+        if settings.ENV in ("development", "local", "test"):
+            return LocalStorage()
+        raise StorageNotConfigured("R2 object storage is not configured")
     return R2Storage(settings)
 
 
