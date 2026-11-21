@@ -21,6 +21,12 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
+# Explicit package marker so ``import app.db`` works even when the package dir
+# does not contain __init__.py.
+__path__ = [__file__.rpartition("/")[0] or "."]
+__all__ = ["Base"]
+
+
 settings = get_settings()
 
 engine_kwargs: dict = {"pool_pre_ping": True}

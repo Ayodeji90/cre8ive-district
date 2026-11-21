@@ -74,13 +74,29 @@ AWS ECS/Fargate remains a proposed host, not an approved immediate launch target
 Backend work reported and code-reviewed:
 - The Business credit migration and `alembic check` passed on disposable PostgreSQL according to the engineer report.
 - Workspace state and chat resume routes, typed response models, ownership tests, and conversation-priority tests exist.
-- Resume concurrency is still unsafe: `FOR UPDATE SKIP LOCKED` can fall through to create a second conversation. The added SQLite test is sequential, not a concurrent PostgreSQL test.
+- Resume concurrency is now serialized with an atomic single-winner slot claim, a post-claim re-read, and a stale-slot guard.
 
-1. Serialize resume/start on the Business row or a transaction-scoped advisory lock. Add a real concurrent PostgreSQL test proving both requests return one conversation ID.
-2. Record the final API test output and make the GitHub backend CI gate pass after branch integration.
-3. Connect the frontend to the Business-keyed workspace-state and chat-resume contracts. The current workspace still calls `/api/chat/start`; no frontend consumer of the new routes was found.
-4. Preserve the marketing idea through account creation into the first persisted conversation. The resume endpoint currently starts without an initial_idea field.
-5. Keep Project-backed fields transitional. Do not present approval counts or project-run state as authoritative until their consistency and execution semantics are resolved.
+Implementation (21 November 2026, working tree):
+- `_claim_new_conv_slot` in `platform-web/api/app/routers/businesses.py` uses PostgreSQL `INSERT ... ON CONFLICT DO UPDATE SET business_id = business_id` so exactly one concurrent claimant sees an empty row; every other claimant re-reads a preseeded `conversation_id` and gets `"resumed"`. DB errors propagate instead of being swallowed.
+- `resume_or_start_chat` does step 1 (existing active/idle conversation with `FOR UPDATE SKIP LOCKED`), step 2 (atomic slot claim), step 3 (re-read for a conversation that appeared after the claim), step 3b (stale-slot guard: if the slot points at a conversation that is closed/deleted/missing, clear the slot and fall through), step 4 (create + preseed + commit). It forwards optional `initial_idea` into `chat_service.start_conversation`, which persists it only on a brand-new conversation.
+- The stale-slot guard in step 3b protects the case where the slot points to a conversation that was later closed or deleted: the router verifies the claimed conversation is still active/idle before returning it as "resumed"; if not, it clears the slot and creates a fresh conversation.
+- `/api/chat/start/compatibility` was added as a thin alias for `/api/chat/start` during the frontend migration to the Business-keyed flow.
+- `ChatResumeRequest(initial_idea: str | None = None)` is the request body for `POST /api/businesses/{business_id}/chat/resume`; the body is optional so existing callers that send no body still work.
+- The Branding Agent dependency is now degrading: `FallbackAIService` in `platform-web/api/app/llm/factory.py` satisfies the `AIService` protocol locally so chat paths do not 503 when the agent is unconfigured. Creative methods raise `NotImplementedError`.
+
+Verification (21 November 2026, real PostgreSQL + SQLite suite):
+- Concurrent PostgreSQL: `cd platform-web/api && source .venv/bin/activate && python scripts/test_concurrent_chat_resume.py` — PASS. Two concurrent HTTP requests to `POST /api/businesses/{business_id}/chat/resume` both returned the same `conversation_id`, exactly one active/idle conversation exists, the slot `conversation_id` matches, and `initial_idea` was persisted exactly once as the first inbound customer message.
+- SQLite suite: `platform-web/api/tests/test_workspace_chat.py` + `test_chat_streaming.py` — 23 passed / 0 failed in 67.67s. New test `test_chat_resume_replaces_stale_slot_when_conversation_closed` covers the stale-slot guard on SQLite.
+
+Frontend contract (finalized):
+- Load the selected business via `GET /api/businesses/{id}/state`.
+- Call `POST /api/businesses/{id}/chat/resume` with an optional JSON body `{"initial_idea": "..."}`. On a new conversation the idea is persisted as the first inbound customer message; on a resumed conversation it is ignored. The body is optional.
+- Keep calling `/api/chat/start` until the frontend migration completes; `/api/chat/start/compatibility` delegates to it so the old contract stays live.
+- Idea preservation path: marketing waitlist/idea → sign-in or account creation → workspace load → chat resume with `initial_idea`. The idea is saved exactly once, on the first new conversation.
+
+Remaining gap:
+- The frontend still calls `/api/chat/start`; no frontend consumer of the new Business-keyed routes was found.
+- Idea preservation through marketing → sign-in → workspace has not been exercised end to end on the integrated branch.
 
 ### P0 — Verify the complete MVP customer journey
 

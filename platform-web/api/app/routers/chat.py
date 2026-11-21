@@ -51,6 +51,22 @@ async def start_chat(
     )
 
 
+@router.post("/start/compatibility", response_model=ChatStartResponse)
+async def start_chat_compatibility(
+    payload: ChatStartRequest,
+    db: AsyncSession = Depends(get_db),
+    ai: AIService = Depends(get_ai),
+    user: User = Depends(get_current_user),
+) -> ChatStartResponse:
+    """Compatibility alias for clients that still call /api/chat/start.
+
+    New frontend work should use ``POST /api/businesses/{business_id}/chat/resume``
+    with the business keyed flow and optional ``initial_idea``. This endpoint
+    keeps the same contract as ``/api/chat/start`` for the migration window.
+    """
+    return await start_chat(payload, db=db, ai=ai, user=user)
+
+
 @router.get("/{conversation_id}/history", response_model=ChatHistoryResponse)
 async def history(
     conversation_id: uuid.UUID,

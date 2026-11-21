@@ -22,7 +22,11 @@ class AIService(Protocol):
         conversation_context: dict,
         message_history: list[dict],
         new_message: str,
-    ) -> AsyncIterator[str]: ...
+    ) -> AsyncIterator[str]:
+        """Yield reply chunks. The default implementation yields a friendly
+        fallback so callers that cannot reach a remote AI agent still get a
+        usable (if unbranded) greeting instead of an error."""
+        yield "Hi! What business are we building today?\n"
 
     async def extract_context(self, message_history: list[dict]) -> dict: ...
 

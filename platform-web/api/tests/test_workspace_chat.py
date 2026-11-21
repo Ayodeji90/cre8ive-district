@@ -13,6 +13,7 @@ Covers:
 import uuid
 
 import pytest
+from sqlalchemy import select
 
 from app.models import Business, Conversation, User
 from tests.conftest import auth_headers
@@ -188,6 +189,22 @@ async def test_chat_resume_returns_same_conversation(client, session_factory, cu
 
 
 @pytest.mark.asyncio
+async def test_chat_resume_never_returns_none_response(client, session_factory, customer):
+    """resume_or_start_chat must return a valid ChatResumeResponse on every
+    non-error branch, including the new-conversation path."""
+    biz = await _create_business(session_factory, customer.id, "None Check Biz", "none-check-biz")
+    headers = auth_headers(customer)
+
+    res = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert isinstance(data, dict)
+    assert "conversation_id" in data
+    assert "mode" in data
+    assert data["mode"] in ("new", "resumed")
+
+
+@pytest.mark.asyncio
 async def test_chat_resume_reactivates_idle_conversation(client, session_factory, customer):
     """An idle conversation should be reactivated to 'active' on resume."""
     biz = await _create_business(session_factory, customer.id, "Idle Resume Biz", "idle-resume-biz")
@@ -209,13 +226,69 @@ async def test_chat_resume_reactivates_idle_conversation(client, session_factory
 
 
 @pytest.mark.asyncio
+async def test_chat_resume_replaces_stale_slot_when_conversation_closed(
+    client, session_factory, customer
+):
+    """If the new-conversation slot points at a conversation that was later
+    closed (and no other active/idle conversation exists), resume must not
+    return the stale ID — it should clear the slot and create a fresh
+    conversation."""
+    from app.models import NewConvSlot
+
+    biz = await _create_business(
+        session_factory, customer.id, "Stale Slot Biz", "stale-slot-biz"
+    )
+
+    # Create a closed conversation and preseed the slot with its id so the
+    # slot points at a non-resumable conversation — the exact shape the
+    # stale-slot guard protects against. There must be no other
+    # active/idle conversation for this business, or step 1 would resume
+    # that one instead.
+    stale_convo = await _create_conversation(
+        session_factory, biz.id, customer.id, status="closed"
+    )
+    async with session_factory() as db:
+        await db.execute(
+            NewConvSlot.__table__.insert().values(
+                business_id=biz.id,
+                owner_id=customer.id,
+                conversation_id=stale_convo.id,
+            )
+        )
+        await db.commit()
+
+    headers = auth_headers(customer)
+    res = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+
+    # Must create a new conversation, not return the stale closed one.
+    assert data["mode"] == "new"
+    assert data["conversation_id"] != str(stale_convo.id)
+
+    # The stale slot must no longer point at the closed conversation.
+    async with session_factory() as db:
+        slot_row = (
+            await db.execute(
+                select(NewConvSlot.conversation_id).where(
+                    NewConvSlot.business_id == biz.id,
+                    NewConvSlot.owner_id == customer.id,
+                )
+            )
+        ).scalars().first()
+    assert slot_row != stale_convo.id
+    # After creating a new conversation the slot is preseeded with its id.
+    assert slot_row == uuid.UUID(data["conversation_id"])
+
+
+@pytest.mark.asyncio
 async def test_chat_resume_skips_closed_conversation(client, session_factory, customer):
     """A closed conversation should not be resumed — a new one should be created."""
     biz = await _create_business(
         session_factory, customer.id, "Closed Resume Biz", "closed-resume-biz"
     )
 
-    await _create_conversation(session_factory, biz.id, customer.id, status="closed")
+    closed_convo = await _create_conversation(session_factory, biz.id, customer.id, status="closed")
 
     headers = auth_headers(customer)
     res = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
@@ -224,8 +297,10 @@ async def test_chat_resume_skips_closed_conversation(client, session_factory, cu
 
     # Should create a new conversation since the existing one is closed
     assert data["mode"] == "new"
+    assert data["conversation_id"] != str(closed_convo.id)
 
 
+@pytest.mark.asyncio
 # ---------------------------------------------------------------------------
 # Ownership Enforcement Tests
 # ---------------------------------------------------------------------------
@@ -316,3 +391,20 @@ async def test_chat_resume_response_schema(client, session_factory, customer):
 
     # No unexpected raw dict fields (should be a proper serialized response)
     uuid.UUID(data["conversation_id"])  # validates it's a proper UUID string
+
+
+@pytest.mark.asyncio
+async def test_chat_resume_response_always_serializable(client, session_factory, customer):
+    """Every resume response body should round-trip through the declared
+    response model without ResponseValidationError."""
+    biz = await _create_business(
+        session_factory, customer.id, "Serialization Biz", "serialization-biz"
+    )
+    headers = auth_headers(customer)
+    res = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    # Basic structural sanity — ChatResumeResponse fields
+    assert isinstance(data.get("context"), dict)
+    assert isinstance(uuid.UUID(data["conversation_id"]), uuid.UUID)
+    assert data["mode"] in ("new", "resumed")

@@ -6,6 +6,7 @@ from app.models.business import Business
 from app.models.conversation import Conversation
 from app.models.credit import CreditTransaction
 from app.models.message import Message
+from app.models.new_conv_slots import NewConvSlot
 from app.models.order import Order
 from app.models.project import AgentRun, ApprovalItem, BrandKit, Project, RunEvent, SiteBuild
 from app.models.project_review import ProjectReview
@@ -25,6 +26,7 @@ __all__ = [
     "Conversation",
     "CreditTransaction",
     "Message",
+    "NewConvSlot",
     "Order",
     "Project",
     "ProjectReview",
