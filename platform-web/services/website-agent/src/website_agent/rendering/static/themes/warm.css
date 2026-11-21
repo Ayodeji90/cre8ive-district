@@ -1,0 +1,12 @@
+/* Theme: Warm — rounded, soft, welcoming */
+:root {
+  --theme-radius: 16px;
+  --theme-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --theme-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.10);
+  --theme-border: none;
+  --theme-heading-weight: 600;
+  --theme-body-line-height: 1.7;
+  --theme-section-padding: 5rem;
+  --theme-transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --theme-button-radius: 999px;
+}

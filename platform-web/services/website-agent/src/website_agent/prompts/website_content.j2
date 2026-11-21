@@ -1,0 +1,65 @@
+You are a website content strategist creating page content for a brand new business website.
+
+Brand: {{ strategy.primary_name }}
+Industry: {{ industry }}
+Positioning: {{ strategy.positioning }}
+Tagline: {{ strategy.tagline }}
+Voice: {{ strategy.voice_attributes | join(', ') }}
+Story: {{ strategy.brand_story }}
+Target audience: {{ strategy.target_description }}
+Elevator pitch: {{ strategy.elevator_pitch }}
+
+Create content for a {{ page_type }} page. The content should:
+- Sound like the brand (match voice attributes)
+- Speak directly to the target audience
+- Be concise — web visitors scan, they don't read essays
+- Include clear calls to action
+- Feel premium and intentional, not template-generated
+
+{% if page_type == "home" %}
+Create a homepage with these sections:
+1. Hero: headline (under 10 words, impactful) + subheadline (1 sentence expanding on it)
+2. About: 2–3 sentences introducing the brand
+3. Features/Services: 3–4 items with short heading + 1-sentence description each
+4. CTA: closing call to action
+
+{% elif page_type == "about" %}
+Create an about page with:
+1. Opening: expanded brand story (3–4 sentences, human and engaging)
+2. Values: 3–4 core values with short descriptions
+3. Mission statement: 1–2 sentences
+
+{% elif page_type == "services" %}
+Create a services page with:
+1. Intro: 1–2 sentences framing the offerings
+2. Services: 3–5 service items with heading + 2-sentence description each
+3. CTA: why choose this business
+
+{% elif page_type == "contact" %}
+Create a contact page with:
+1. Heading and welcoming 1-sentence intro
+2. Suggested form fields (name, email, phone, message)
+3. Closing line
+
+{% elif page_type == "faq" %}
+Create an FAQ page with 8–10 questions and answers relevant to this business and industry. Questions should be ones real customers would ask.
+{% endif %}
+
+Return a JSON object with this structure:
+{
+  "slug": "{{ page_type }}",
+  "title": "page title for browser tab",
+  "meta_description": "SEO meta description under 160 characters",
+  "sections": [
+    {
+      "type": "hero|text|features|cta|faq|contact",
+      "heading": "section heading or null",
+      "body": "section body text or null",
+      "items": [{"heading": "...", "body": "..."}] or null,
+      "cta_text": "button text or null",
+      "cta_url": "link or null"
+    }
+  ]
+}
+
+Return ONLY the JSON object.

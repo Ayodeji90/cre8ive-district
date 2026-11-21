@@ -1,0 +1,33 @@
+<section class="section">
+  <div class="container">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 3.5rem; align-items: center;">
+      <div>
+        {% if section.props.eyebrow %}
+          <span style="display: inline-block; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; font-weight: 700; color: var(--brand-accent, #ff6b35); margin-bottom: 1rem;">
+            {{ section.props.eyebrow }}
+          </span>
+        {% endif %}
+        <h1 style="font-size: clamp(2.2rem, 4.5vw, 3.5rem); margin-bottom: 1.5rem;">
+          {{ section.props.headline }}
+        </h1>
+        <p style="font-size: 1.15rem; color: var(--brand-neutral-700, #444); margin-bottom: 2rem; line-height: 1.6;">
+          {{ section.props.subheadline }}
+        </p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="{{ section.props.cta_url or 'https://wa.me/' + site.business.whatsapp_number }}" class="btn btn-primary">
+            {{ section.props.cta_text or 'Connect With Us' }}
+          </a>
+        </div>
+      </div>
+      <div>
+        <div style="background-color: var(--brand-surface, #fafaf7); border-radius: var(--theme-radius, 12px); border: var(--theme-border, none); box-shadow: var(--theme-shadow, none); padding: 2.5rem; text-align: center;">
+          <div style="width: 80px; height: 80px; background-color: var(--brand-primary); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem;">
+            ✨
+          </div>
+          <h3 style="margin-bottom: 0.75rem; font-size: 1.5rem;">{{ site.brand.name }}</h3>
+          <p style="color: var(--brand-neutral-700); font-size: 1rem; line-height: 1.5;">{{ site.brand.tagline or site.business.description }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

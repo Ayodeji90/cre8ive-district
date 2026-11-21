@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@cre8ive/api-client": ["../../packages/api-client/src/index.ts"],
+      "@cre8ive/tokens": ["../../packages/tokens/src/index.ts"],
+      "@cre8ive/types": ["../../packages/types/src/index.ts"],
+      "@cre8ive/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", "components/**/*.ts", "components/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

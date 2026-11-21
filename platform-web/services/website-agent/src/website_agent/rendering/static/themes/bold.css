@@ -1,0 +1,12 @@
+/* Theme: Bold — high-contrast, confident, punchy */
+:root {
+  --theme-radius: 4px;
+  --theme-shadow: 4px 4px 0px rgba(0, 0, 0, 0.9);
+  --theme-shadow-hover: 6px 6px 0px rgba(0, 0, 0, 0.9);
+  --theme-border: 2px solid #111111;
+  --theme-heading-weight: 800;
+  --theme-body-line-height: 1.5;
+  --theme-section-padding: 4.5rem;
+  --theme-transition: 0.15s ease-out;
+  --theme-button-radius: 4px;
+}

@@ -1,0 +1,12 @@
+/* Theme: Clean — crisp, spacious, modern tech/consulting */
+:root {
+  --theme-radius: 6px;
+  --theme-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --theme-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --theme-border: 1px solid rgba(0, 0, 0, 0.08);
+  --theme-heading-weight: 600;
+  --theme-body-line-height: 1.6;
+  --theme-section-padding: 5.5rem;
+  --theme-transition: 0.2s ease;
+  --theme-button-radius: 6px;
+}

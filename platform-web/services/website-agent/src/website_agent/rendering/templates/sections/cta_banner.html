@@ -1,0 +1,13 @@
+<section class="section" style="background-color: var(--brand-primary, #111); color: #fff; text-align: center;">
+  <div class="container" style="max-width: 800px;">
+    <h2 style="color: #fff; font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 1.25rem;">
+      {{ section.props.heading }}
+    </h2>
+    <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.15rem; margin-bottom: 2.25rem; line-height: 1.6;">
+      {{ section.props.description }}
+    </p>
+    <a href="{{ section.props.cta_url or 'https://wa.me/' + site.business.whatsapp_number }}" class="btn btn-accent" style="padding: 1rem 2.25rem; font-size: 1.05rem;">
+      {{ section.props.cta_text or 'Get Started Today' }}
+    </a>
+  </div>
+</section>

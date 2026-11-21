@@ -1,0 +1,30 @@
+<section id="products" class="section">
+  <div class="container">
+    <div style="text-align: center; max-width: 720px; margin: 0 auto 3.5rem;">
+      <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 1rem;">
+        {{ section.props.heading or 'Featured Products' }}
+      </h2>
+      {% if section.props.description %}
+        <p style="color: var(--brand-neutral-700, #444); font-size: 1.05rem;">{{ section.props.description }}</p>
+      {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem;">
+      {% for item in section.props['items'] %}
+        <div style="background-color: var(--brand-surface, #fafaf7); border-radius: var(--theme-radius, 12px); border: var(--theme-border, none); box-shadow: var(--theme-shadow, none); overflow: hidden; display: flex; flex-direction: column;">
+          <div style="height: 180px; background-color: rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center; font-size: 2.5rem;">
+            📦
+          </div>
+          <div style="padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+              <h3 style="font-size: 1.15rem;">{{ item.name }}</h3>
+              <span style="font-weight: 700; color: var(--brand-primary); font-size: 1.1rem;">{{ item.price }}</span>
+            </div>
+            <p style="color: var(--brand-neutral-700); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.25rem; flex-grow: 1;">{{ item.description }}</p>
+            <a href="https://wa.me/{{ site.business.whatsapp_number }}?text=Hi%2C%20I%20want%20to%20order%20{{ item.name | urlencode }}" class="btn btn-primary" style="padding: 0.6rem 1rem; font-size: 0.85rem; width: 100%;">Order via WhatsApp</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
