@@ -35,12 +35,16 @@ that the selected ref has a successful backend CI push run on `main`. Images
 are not published by pull-request checks.
 
 Production runs only after staging succeeds and requires approval through the
-`production` GitHub Environment. Configure that environment with the chosen
-reviewers and a `main` branch restriction before relying on this gate. Likewise,
-configure `main` branch protection/rulesets to require `Frontend CI gate`,
-`Backend CI gate`, and the team's chosen PR approval count. At the time of this
-review, the repository had no branch protection/rulesets or GitHub environments,
-so these controls are not yet active.
+`production` GitHub Environment. GitHub is configured to restrict both
+environments to `main`; production review is assigned to `Ayodeji90`, and
+self-review is allowed as requested. The repository's environment setting also
+allows administrators to bypass protection rules; disable that option in the
+GitHub environment settings UI if administrative bypass should be prohibited.
+
+`main` is protected: pull requests and the `Frontend CI gate` and
+`Backend CI gate` checks are required, branches must be up to date, administrators
+are included, and force pushes/deletions are disabled. The configured minimum
+PR approvals is zero, so this does not provide independent code review.
 
 If a merged commit touches no backend paths, `preflight` sets `deploy=false`
 and no images are built or rolled. The first time you merge this pipeline, the
@@ -225,8 +229,9 @@ cd platform-web && docker compose config -q
 cd platform-web && make lint && make test
 ```
 
-The first real release requires the AWS resources above. Until the `staging`
-environment variables and GitHub environment protections are configured, the
-deploy preflight will fail before any ECS service is touched; images may already
-have been built and pushed, but deployments continue to reference their immutable
+The first real release requires the AWS resources above. The GitHub environments
+and branch protections are configured, but their required AWS environment
+variables were not present at review time. Until those variables and AWS
+resources are configured, deploy preflight fails before touching ECS; images
+may already have been built and pushed, but deployments reference immutable
 digests.
