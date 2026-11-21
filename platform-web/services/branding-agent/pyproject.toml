@@ -28,6 +28,7 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
+    "ruff==0.16.0",
 ]
 
 [tool.setuptools]
@@ -42,7 +43,9 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC"]
-ignore = ["B008"]
+# E501: the formatter owns line wrapping; long strings/URLs are unavoidable.
+# UP042: StrEnum migration changes enum serialization semantics; opt in deliberately.
+ignore = ["B008", "E501", "UP042"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -41,8 +41,9 @@ clarification questions. The shared v1 JSON Schemas live in
 
 Copy `.env.example` to `.env` and add keys for the providers you want to use.
 `LLM_ROUTING_ORDER` controls the sequential order; a deployment is included only
-when both its API key and model are configured. The default order is Groq,
-NVIDIA NIM, OpenRouter, Anthropic, then OpenAI. NVIDIA NIM and OpenRouter can
+when both its API key and model are configured. The default is OpenRouter only, to avoid falling back to providers that may incur charges. Set
+`LLM_ROUTING_ORDER` explicitly to enable a broader fallback chain, for example Groq, NVIDIA NIM,
+OpenRouter, Anthropic, then OpenAI. NVIDIA NIM and OpenRouter can
 also use their respective optional API base URL settings.
 
 The router retries the same request context on the next configured provider only

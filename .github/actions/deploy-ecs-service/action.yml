@@ -1,0 +1,111 @@
+name: Deploy ECS service
+description: >
+  Point an ECS service at a new task definition. When `image` is set, the
+  current task definition is cloned, the container image is swapped, and a new
+  revision is registered. Without `image`, the supplied task definition ARN is
+  used as-is (rollback path).
+
+inputs:
+  cluster:
+    description: ECS cluster name or ARN.
+    required: true
+  service:
+    description: ECS service name.
+    required: true
+  task_definition:
+    description: Task definition family (with image) or exact ARN (rollback).
+    required: true
+  container:
+    description: Container name to update when `image` is set.
+    required: false
+    default: ""
+  image:
+    description: Full image reference. Leave empty to deploy `task_definition` verbatim.
+    required: false
+    default: ""
+  wait:
+    description: Wait for the service to become stable.
+    required: false
+    default: "true"
+  update_service:
+    description: Set false to only register the task definition (for migrations).
+    required: false
+    default: "true"
+
+outputs:
+  task_definition_arn:
+    description: Task definition the service now runs.
+    value: ${{ steps.deploy.outputs.task_definition_arn }}
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy
+      id: deploy
+      shell: bash
+      env:
+        CLUSTER: ${{ inputs.cluster }}
+        SERVICE: ${{ inputs.service }}
+        TASK_DEFINITION: ${{ inputs.task_definition }}
+        CONTAINER: ${{ inputs.container }}
+        IMAGE: ${{ inputs.image }}
+        WAIT: ${{ inputs.wait }}
+        UPDATE_SERVICE: ${{ inputs.update_service }}
+      run: |
+        set -euo pipefail
+
+        if [ -n "$IMAGE" ]; then
+          if [ -z "$CONTAINER" ]; then
+            echo "::error::container is required when image is set"
+            exit 1
+          fi
+          workdir="$RUNNER_TEMP/ecs-${SERVICE//\//-}"
+          mkdir -p "$workdir"
+
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_DEFINITION" \
+            --query 'taskDefinition' > "$workdir/taskdef.json"
+
+          # Strip read-only fields that register-task-definition rejects.
+          jq 'del(
+                .taskDefinitionArn,
+                .revision,
+                .status,
+                .requiresAttributes,
+                .compatibilities,
+                .registeredAt,
+                .registeredBy,
+                .deregisteredAt
+              )' "$workdir/taskdef.json" > "$workdir/taskdef-clean.json"
+
+          jq --arg image "$IMAGE" --arg container "$CONTAINER" \
+            '.containerDefinitions |= map(
+               if .name == $container then .image = $image else . end
+             )' "$workdir/taskdef-clean.json" > "$workdir/taskdef-new.json"
+
+          if ! jq -e --arg container "$CONTAINER" \
+            'any(.containerDefinitions[]; .name == $container)' \
+            "$workdir/taskdef-new.json" >/dev/null; then
+            echo "::error::Container '$CONTAINER' not found in task definition $TASK_DEFINITION"
+            exit 1
+          fi
+
+          TASK_DEFINITION=$(aws ecs register-task-definition \
+            --cli-input-json "file://$workdir/taskdef-new.json" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "Registered $TASK_DEFINITION"
+        fi
+
+        if [ "$UPDATE_SERVICE" = "true" ]; then
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition "$TASK_DEFINITION" >/dev/null
+
+          if [ "$WAIT" = "true" ]; then
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
+          fi
+        fi
+
+        echo "task_definition_arn=$TASK_DEFINITION" >> "$GITHUB_OUTPUT"

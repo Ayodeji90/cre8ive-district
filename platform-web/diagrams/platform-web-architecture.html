@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cre8ive District platform-web architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --paper: #f5f5ee;
+      --paper-2: #ffffff;
+      --ink: #2d2d2d;
+      --muted: #606058;
+      --soft: #77776f;
+      --rule: #e0e0d8;
+      --orange: #f36b35;
+      --orange-light: #fef3ee;
+      --sans: "Plus Jakarta Sans", system-ui, sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "Geist Mono", ui-monospace, monospace;
+    }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 400 15px/1.65 var(--sans);
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 48px 40px 72px; }
+    .eyebrow {
+      color: var(--muted);
+      font: 500 11px/1.4 var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+    h1 {
+      font: 400 clamp(36px, 5vw, 56px)/1.02 var(--serif);
+      letter-spacing: -.02em;
+      margin: 0;
+    }
+    .intro { max-width: 780px; color: var(--muted); margin: 14px 0 26px; }
+    .diagram-container { width: 100%; overflow-x: auto; border: 1px solid var(--rule); background: var(--paper); }
+    svg { display: block; width: 100%; min-width: 1280px; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      border-bottom: 1px solid var(--rule);
+      padding: 16px 2px 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 8px; }
+    .swatch { display: inline-block; width: 18px; height: 10px; border: 1px solid var(--muted); background: var(--paper-2); }
+    .swatch.active { border-color: var(--orange); background: var(--orange-light); }
+    .swatch.future { border-style: dashed; background: transparent; }
+    section { margin-top: 40px; }
+    h2 { font: 600 21px/1.25 var(--sans); margin: 0 0 12px; }
+    h3 { font: 600 15px/1.4 var(--sans); margin: 0 0 5px; }
+    p { margin: 0; }
+    .flow {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr .95fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .flow article, .ownership {
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--paper-2);
+      padding: 18px 20px;
+    }
+    .step {
+      color: var(--orange);
+      font: 500 11px/1.4 var(--mono);
+      letter-spacing: .1em;
+      margin-bottom: 10px;
+    }
+    .ownership {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 28px;
+      margin-top: 16px;
+    }
+    .ownership p, .flow p { color: var(--muted); font-size: 14px; }
+    .ownership .planned { border-left: 3px solid var(--orange); padding-left: 14px; }
+    .caveat { margin-top: 18px; padding: 14px 18px; background: var(--orange-light); border-left: 3px solid var(--orange); }
+    .caveat p { color: var(--ink); font-size: 14px; }
+    code { font: 12px var(--mono); color: var(--muted); }
+    @media (max-width: 700px) {
+      main { padding: 32px 18px 48px; }
+      .flow, .ownership { grid-template-columns: 1fr; }
+    }
+    @media print {
+      main { max-width: none; padding: 12mm; }
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+      .flow, .ownership { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Platform architecture · current implementation</p>
+  <h1>One platform, independent AI services</h1>
+  <p class="intro">
+    The platform API owns customers, businesses, payments, jobs, persistence and review.
+    The Website Agent's brand input comes directly from Branding Agent output; the API
+    remains the platform control plane, not the source or relay for that brand package.
+    Website generation is still a scaffold.
+  </p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="platform-web-architecture-title platform-web-architecture-desc">
+      <title id="platform-web-architecture-title">Cre8ive District platform-web architecture</title>
+      <desc id="platform-web-architecture-desc">The Next.js apps call the platform API, which owns persistence and queues background work; a worker calls the Branding Agent over authenticated HTTP, while Website Agent integration remains planned.</desc>
+      <defs>
+        <marker id="arch-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#606058"/></marker>
+        <marker id="arch-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2d2d2d"/></marker>
+        <marker id="arch-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f36b35"/></marker>
+      </defs>
+      <rect width="1280" height="720" fill="#f5f5ee"/>
+
+      <!-- Service boundary -->
+      <rect x="216" y="72" width="500" height="436" rx="8" fill="rgba(45,45,45,0.025)" stroke="rgba(45,45,45,0.18)" stroke-width="1"/>
+      <rect x="236" y="76" width="202" height="16" rx="2" fill="#f5f5ee"/>
+      <text x="337" y="88" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="9" font-weight="500" letter-spacing="1.1">PLATFORM CONTROL PLANE</text>
+
+      <!-- Primary paths -->
+      <path d="M188 288 H252" fill="none" stroke="#2d2d2d" stroke-width="1.5" marker-end="url(#arch-link)"/>
+      <rect x="190" y="268" width="58" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="219" y="278" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".4">HTTPS</text>
+
+      <path d="M438 240 H456 Q464 240 464 232 V160 Q464 152 472 152 H500" fill="none" stroke="#606058" stroke-width="1.3" marker-end="url(#arch-arrow)"/>
+      <rect x="446" y="182" width="45" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="468" y="192" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">ENQUEUE</text>
+
+      <path d="M574 192 V264" fill="none" stroke="#606058" stroke-width="1.3" marker-end="url(#arch-arrow)"/>
+      <rect x="582" y="218" width="46" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="605" y="228" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">DEQUEUE</text>
+
+      <path d="M594 360 V416" fill="none" stroke="#606058" stroke-width="1.3" marker-end="url(#arch-arrow)"/>
+      <rect x="602" y="380" width="48" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="626" y="390" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">PERSIST</text>
+
+      <path d="M688 312 H788" fill="none" stroke="#2d2d2d" stroke-width="1.7" marker-start="url(#arch-link)" marker-end="url(#arch-link)"/>
+      <rect x="700" y="292" width="76" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="738" y="302" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">HTTP · API KEY</text>
+
+      <path d="M984 228 H1016 Q1024 228 1024 220 V170 Q1024 162 1032 162 H1052" fill="none" stroke="#606058" stroke-width="1.3" marker-end="url(#arch-arrow)"/>
+      <rect x="1000" y="184" width="48" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="1024" y="194" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">LLM / IMAGE</text>
+
+      <path d="M984 336 H1052" fill="none" stroke="#606058" stroke-width="1.3" marker-end="url(#arch-arrow)"/>
+      <rect x="992" y="316" width="52" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="1018" y="326" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".3">WRITE ASSETS</text>
+
+      <path d="M886 336 V440" fill="none" stroke="#f36b35" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arch-accent)"/>
+      <rect x="892" y="376" width="114" height="14" rx="2" fill="#f5f5ee"/>
+      <text x="949" y="386" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" letter-spacing=".2">BRAND PACKAGE OUTPUT</text>
+
+      <!-- Nodes -->
+      <g>
+        <rect x="32" y="244" width="156" height="88" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="44" y="256" width="78" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="83" y="266" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".6">PRODUCT UI</text>
+        <text x="44" y="292" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">Next.js apps</text>
+        <text x="44" y="312" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">marketing · platform · admin</text>
+      </g>
+
+      <g>
+        <rect x="252" y="204" width="186" height="108" rx="6" fill="#ffffff" stroke="#f36b35" stroke-width="1.5"/>
+        <rect x="264" y="216" width="88" height="14" rx="2" fill="#fef3ee"/>
+        <text x="308" y="226" text-anchor="middle" fill="#2d2d2d" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".6">PLATFORM API</text>
+        <text x="264" y="254" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">FastAPI</text>
+        <text x="264" y="274" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">users · business · billing</text>
+        <text x="264" y="292" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">jobs · review · delivery</text>
+      </g>
+
+      <g>
+        <rect x="500" y="116" width="148" height="76" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="512" y="128" width="74" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="549" y="138" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">JOB QUEUE</text>
+        <text x="512" y="164" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">Redis + ARQ</text>
+        <text x="512" y="180" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">async work</text>
+      </g>
+
+      <g>
+        <rect x="500" y="264" width="188" height="96" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="512" y="276" width="82" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="553" y="286" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">BACKGROUND</text>
+        <text x="512" y="312" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">API worker</text>
+        <text x="512" y="332" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">brand workflow · delivery</text>
+        <text x="512" y="348" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">asset render · retries</text>
+      </g>
+
+      <g>
+        <rect x="500" y="416" width="188" height="72" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="512" y="428" width="86" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="555" y="438" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">PLATFORM DATA</text>
+        <text x="512" y="464" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">PostgreSQL</text>
+        <text x="512" y="480" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">business · brand · order · review</text>
+      </g>
+
+      <g>
+        <rect x="788" y="204" width="196" height="132" rx="6" fill="#fef3ee" stroke="#f36b35" stroke-width="1.5"/>
+        <rect x="800" y="216" width="92" height="14" rx="2" fill="#f36b35"/>
+        <text x="846" y="226" text-anchor="middle" fill="#2d2d2d" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">LIVE AI SERVICE</text>
+        <text x="800" y="254" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">Branding Agent</text>
+        <text x="800" y="274" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">strategy · logo · palette</text>
+        <text x="800" y="290" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">fonts · copy · validation</text>
+        <text x="800" y="314" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">rendering · guidelines · kit</text>
+      </g>
+
+      <g>
+        <rect x="1052" y="124" width="184" height="76" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="1064" y="136" width="82" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="1105" y="146" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">PROVIDERS</text>
+        <text x="1064" y="172" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="12" font-weight="600">LLM + image APIs</text>
+        <text x="1064" y="188" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">configured in the agent</text>
+      </g>
+
+      <g>
+        <rect x="1052" y="300" width="184" height="76" rx="6" fill="#ffffff" stroke="#a0a098" stroke-width="1"/>
+        <rect x="1064" y="312" width="72" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="1100" y="322" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">ASSET STORE</text>
+        <text x="1064" y="348" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">R2 / local</text>
+        <text x="1064" y="364" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">agent writes; API signs links</text>
+      </g>
+
+      <g>
+        <rect x="788" y="440" width="196" height="80" rx="6" fill="#f5f5ee" stroke="#a0a098" stroke-width="1" stroke-dasharray="5,4"/>
+        <rect x="800" y="452" width="92" height="14" rx="2" fill="#f0f0ea"/>
+        <text x="846" y="462" text-anchor="middle" fill="#606058" font-family="'Geist Mono', monospace" font-size="8" font-weight="500" letter-spacing=".5">SCAFFOLD ONLY</text>
+        <text x="800" y="488" fill="#2d2d2d" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="600">Website Agent</text>
+        <text x="800" y="506" fill="#606058" font-family="'Geist Mono', monospace" font-size="9">consumes Branding Agent output</text>
+      </g>
+
+      <line x1="32" y1="680" x2="1236" y2="680" stroke="#e0e0d8"/>
+      <text x="32" y="702" fill="#606058" font-family="'Geist Mono', monospace" font-size="9" letter-spacing=".3">SOLID = RUNNING CONNECTION · DASHED = INTENDED DATA FLOW, NOT YET INTEGRATED</text>
+    </svg>
+  </div>
+  <div class="legend" aria-label="Diagram legend">
+    <span><i class="swatch active"></i> Integrated AI service</span>
+    <span><i class="swatch"></i> Platform or external dependency</span>
+    <span><i class="swatch future"></i> Intended service data flow, not yet integrated</span>
+  </div>
+
+  <section>
+    <h2>How a brand job moves through the system</h2>
+    <div class="flow">
+      <article>
+        <p class="step">01 · REQUEST</p>
+        <h3>Product apps → Platform API</h3>
+        <p>The API handles the user-facing workflow and platform rules. When brand generation is needed, it records/queues work rather than running a long AI task in the request.</p>
+      </article>
+      <article>
+        <p class="step">02 · GENERATE</p>
+        <h3>Queue → worker → Branding Agent</h3>
+        <p>The worker calls the Branding Agent for strategy, logo, palette, fonts, copy and validation. The Branding Agent's output is the Website Agent's input; the intended data transfer is direct service-to-service, not through the platform API.</p>
+      </article>
+      <article>
+        <p class="step">03 · REVIEW & DELIVER</p>
+        <h3>Platform persists and completes</h3>
+        <p>The API still owns users, business records, payments, job status and human review. It can coordinate jobs and permissions without becoming the source or relay of the brand data consumed by the Website Agent.</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Which component owns what?</h2>
+    <div class="ownership">
+      <div>
+        <h3>Frontend · <code>apps/</code></h3>
+        <p>Next.js marketing, customer platform and admin interfaces. These are clients; they do not own brand-generation workflows or persistence.</p>
+      </div>
+      <div>
+        <h3>Platform API · <code>api/</code></h3>
+        <p>FastAPI endpoints, authentication, businesses, orders/payments, jobs, review, persistence, delivery and the adapter to AI services.</p>
+      </div>
+      <div>
+        <h3>Branding Agent · <code>services/branding-agent/</code></h3>
+        <p>Independent HTTP service for brand AI operations and asset rendering. Its generated brand package is the input source for the Website Agent; provider credentials belong here.</p>
+      </div>
+      <div>
+        <h3>Shared types · <code>contracts/</code> and <code>packages/</code></h3>
+        <p>Intended place for cross-service request/result/event definitions and frontend API clients. A canonical, versioned schema package is still a follow-up.</p>
+      </div>
+      <div class="planned">
+        <h3>Website Agent · <code>services/website-agent/</code></h3>
+        <p>Independent service boundary exists, but it currently exposes health and holds a relocated prompt only. The intended direct Branding Agent → Website Agent brand-package flow and website generation are not implemented yet.</p>
+      </div>
+      <div>
+        <h3>Local runtime · <code>docker-compose.yml</code></h3>
+        <p>Runs PostgreSQL, Redis, API, worker, Branding Agent and Website Agent. Service separation is in place; not every service is product-connected yet.</p>
+      </div>
+    </div>
+    <div class="caveat">
+      <p><strong>Current limitation:</strong> structured or conversational brand intake clarification is not yet a complete end-to-end flow into the generation fields. Treat the Website Agent and canonical shared contracts as architecture foundations, not finished product features.</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>
