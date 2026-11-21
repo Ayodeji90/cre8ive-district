@@ -1,9 +1,8 @@
 import re
 import uuid
 
-from typing import Optional
-
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,13 +14,13 @@ from app.models import Business, Conversation, NewConvSlot, User
 from app.ownership import assert_business_owner
 from app.schemas.business import BusinessCreate, BusinessResponse, BusinessUpdate
 from app.schemas.workspace import ChatResumeResponse, WorkspaceStateResponse
-from pydantic import BaseModel
+from app.services import chat as chat_service
+from app.services.workspace import build_workspace_state
 
 
 class ChatResumeRequest(BaseModel):
     initial_idea: str | None = None
-from app.services import chat as chat_service
-from app.services.workspace import build_workspace_state
+
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
 
@@ -96,13 +95,17 @@ async def _claim_new_conv_slot(
     await db.execute(pg_stmt)
 
     row = (
-        await db.execute(
-            select(NewConvSlot.conversation_id).where(
-                NewConvSlot.business_id == business_id,
-                NewConvSlot.owner_id == owner_id,
+        (
+            await db.execute(
+                select(NewConvSlot.conversation_id).where(
+                    NewConvSlot.business_id == business_id,
+                    NewConvSlot.owner_id == owner_id,
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
 
     # ``select(.NewConvSlot.conversation_id)`` returns the scalar value
     # directly via ``.scalars()``, so ``row`` is already the UUID (or None).
@@ -191,7 +194,7 @@ async def get_workspace_state(
 @router.post("/{business_id}/chat/resume", response_model=ChatResumeResponse)
 async def resume_or_start_chat(
     business_id: uuid.UUID,
-    payload: Optional[ChatResumeRequest] = Body(default=None),
+    payload: ChatResumeRequest | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
     ai: AIService | None = Depends(get_ai),
@@ -286,8 +289,7 @@ async def resume_or_start_chat(
         stale_check = (
             (
                 await db.execute(
-                    select(Conversation)
-                    .where(
+                    select(Conversation).where(
                         Conversation.id == claimed,
                         Conversation.business_id == business.id,
                         Conversation.user_id == user.id,

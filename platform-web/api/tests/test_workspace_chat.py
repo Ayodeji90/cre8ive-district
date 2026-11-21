@@ -235,18 +235,14 @@ async def test_chat_resume_replaces_stale_slot_when_conversation_closed(
     conversation."""
     from app.models import NewConvSlot
 
-    biz = await _create_business(
-        session_factory, customer.id, "Stale Slot Biz", "stale-slot-biz"
-    )
+    biz = await _create_business(session_factory, customer.id, "Stale Slot Biz", "stale-slot-biz")
 
     # Create a closed conversation and preseed the slot with its id so the
     # slot points at a non-resumable conversation — the exact shape the
     # stale-slot guard protects against. There must be no other
     # active/idle conversation for this business, or step 1 would resume
     # that one instead.
-    stale_convo = await _create_conversation(
-        session_factory, biz.id, customer.id, status="closed"
-    )
+    stale_convo = await _create_conversation(session_factory, biz.id, customer.id, status="closed")
     async with session_factory() as db:
         await db.execute(
             NewConvSlot.__table__.insert().values(
@@ -269,13 +265,17 @@ async def test_chat_resume_replaces_stale_slot_when_conversation_closed(
     # The stale slot must no longer point at the closed conversation.
     async with session_factory() as db:
         slot_row = (
-            await db.execute(
-                select(NewConvSlot.conversation_id).where(
-                    NewConvSlot.business_id == biz.id,
-                    NewConvSlot.owner_id == customer.id,
+            (
+                await db.execute(
+                    select(NewConvSlot.conversation_id).where(
+                        NewConvSlot.business_id == biz.id,
+                        NewConvSlot.owner_id == customer.id,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
     assert slot_row != stale_convo.id
     # After creating a new conversation the slot is preseeded with its id.
     assert slot_row == uuid.UUID(data["conversation_id"])

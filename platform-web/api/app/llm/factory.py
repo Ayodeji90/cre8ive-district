@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 
 from app.config import Settings
 from app.llm.base import AIService, AIServiceNotConfigured
-from app.llm.remote import BrandingAgentClient, build_ai_service
+from app.llm.remote import build_ai_service
 from app.schemas.ai import BrandCopy, BrandStrategy, FontPair, PaletteResult, ValidationResult
 
 
@@ -28,7 +28,9 @@ class FallbackAIService(AIService):
     async def extract_context(self, message_history: list[dict]) -> dict:
         return {}
 
-    async def generate_strategy(self, description: str, industry: str, preferences: dict) -> BrandStrategy:
+    async def generate_strategy(
+        self, description: str, industry: str, preferences: dict
+    ) -> BrandStrategy:
         raise NotImplementedError("Branding Agent is not configured")
 
     async def generate_logos(self, strategy, industry, style_keywords=None) -> list[str]:

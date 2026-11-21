@@ -39,9 +39,7 @@ try:
     JWT_ALGORITHM = _settings.JWT_ALGORITHM
     print(f"Loaded JWT_SECRET from API config (len={len(JWT_SECRET)})")
 except Exception as exc:
-    print(
-        f"WARNING: could not load API config for JWT secret: {type(exc).__name__}: {exc}"
-    )
+    print(f"WARNING: could not load API config for JWT secret: {type(exc).__name__}: {exc}")
     print("  Falling back to env JWT_SECRET; the test will likely get 401.")
     JWT_SECRET = os.environ.get("JWT_SECRET", "dev-only-secret-change-me")
     JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
@@ -133,7 +131,7 @@ async def concurrent_verify() -> tuple[bool, str]:
             None,
             "free",
             50,
-            '{}',  # preferences is NOT NULL (JSON column)
+            "{}",  # preferences is NOT NULL (JSON column)
             user_id,
         )
 
@@ -217,13 +215,9 @@ async def concurrent_verify() -> tuple[bool, str]:
             content = (m["content"] or "").strip()
             if content == INITIAL_IDEA.strip():
                 if m["role"] != "customer" or m["direction"] != "inbound":
-                    return False, (
-                        f"initial_idea found but with wrong role/direction: {dict(m)}"
-                    )
+                    return False, (f"initial_idea found but with wrong role/direction: {dict(m)}")
                 if idea_seen:
-                    return False, (
-                        f"initial_idea appears more than once in conversation {c0_uuid}"
-                    )
+                    return False, (f"initial_idea appears more than once in conversation {c0_uuid}")
                 idea_seen = True
         if not idea_seen:
             return False, (
@@ -263,7 +257,7 @@ async def main() -> int:
 
     if not api_listening:
         print("API not listening on :8000 — starting uvicorn now")
-        uvicorn_proc = subprocess.Popen(
+        uvicorn_proc = subprocess.Popen(  # noqa: ASYNC220
             [
                 sys.executable,
                 "-m",
@@ -291,7 +285,7 @@ async def main() -> int:
                     s.connect(("127.0.0.1", 8000))
                     break
                 except OSError:
-                    time.sleep(0.3)
+                    time.sleep(0.3)  # noqa: ASYNC251
         else:
             print("timed out waiting for uvicorn to listen")
             return 1
