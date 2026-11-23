@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, render, renderHook, waitFor } from '@testing-library/react'
 import * as React from 'react'
 import { useAbijaChat } from './use-abija-chat'
 import type {
@@ -170,8 +170,6 @@ function setLocation(pathname: string) {
     configurable: true,
   })
 }
-
-type Harness = ReturnType<typeof makeHarness>
 
 function makeHarness(opts: {
   businessId?: string
@@ -574,7 +572,7 @@ describe('useAbijaChat — contract', () => {
     }
 
     function renderApprovalPane(pending: ApprovalItem[], recent: ApprovalItem[]) {
-      const { container } = require('@testing-library/react').render(
+      const { container } = render(
         React.createElement(ApprovalPane, { pending, recent }),
       )
       const parsed = JSON.parse(container.firstChild?.getAttribute('data-labels') ?? '[]')
