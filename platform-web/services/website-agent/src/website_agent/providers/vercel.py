@@ -26,7 +26,7 @@ class VercelDeployer(Protocol):
 class MockVercelDeployer:
     """Mock deployer for testing and local development without a live Vercel token."""
 
-    def __init__(self, domain_suffix: str = "cre8ive.ng") -> None:
+    def __init__(self, domain_suffix: str = "cre8ivedistrict.app") -> None:
         self._domain_suffix = domain_suffix
 
     async def deploy(self, site: SiteSpec, file_tree: dict[str, str]) -> DeploymentResult:
@@ -130,7 +130,7 @@ class LiveVercelDeployer:
                     if state != "READY":
                         raise RuntimeError(f"Vercel deployment finished in state {state}")
 
-                    # 3. Assign custom subdomain (e.g. slug.cre8ive.ng)
+                    # 3. Assign custom subdomain (e.g. slug.cre8ivedistrict.app)
                     custom_domain = f"{subdomain}.{self._domain_suffix}"
                     await self._assign_domain(client, project_id, custom_domain)
 

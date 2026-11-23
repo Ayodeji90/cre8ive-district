@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     VERCEL_TOKEN: str = ""
     VERCEL_TEAM_ID: str | None = None
     VERCEL_SCOPE: str | None = None
-    PRIMARY_DOMAIN_SUFFIX: str = "cre8ive.ng"  # e.g., slug.cre8ive.ng
+    PRIMARY_DOMAIN_SUFFIX: str = "cre8ivedistrict.app"  # e.g., slug.cre8ivedistrict.app
     DEPLOY_STUB: bool = True  # True: return mock Vercel deployment URL
 
     @model_validator(mode="after")

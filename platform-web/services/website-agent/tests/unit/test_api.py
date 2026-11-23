@@ -59,4 +59,4 @@ async def test_api_generate_and_deploy_website():
         deploy_data = deploy_res.json()
         assert deploy_data["site_id"] == site_id
         assert deploy_data["ready_state"] == "READY"
-        assert "zaria-botanicals.cre8ive.ng" in deploy_data["live_url"]
+        assert "zaria-botanicals.cre8ivedistrict.app" in deploy_data["live_url"]

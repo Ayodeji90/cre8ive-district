@@ -45,7 +45,7 @@ jobs:
       image_prefix: ${{ steps.meta.outputs.image_prefix }}
       deploy: ${{ steps.changes.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.ref || github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 2
@@ -116,26 +116,26 @@ jobs:
           - { context: "platform-web/services/website-agent", tag: "website-agent" }
           - { context: "platform-web/services/run-engine", tag: "run-engine" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ needs.preflight.outputs.sha }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         id: meta
         with:
           images: ${{ needs.preflight.outputs.image_prefix }}-${{ matrix.service.tag }}
           tags: |
             type=raw,value=${{ needs.preflight.outputs.tag }}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         id: push
         with:
           context: ${{ matrix.service.context }}
@@ -158,7 +158,7 @@ jobs:
           fi
           printf '%s\n' "$IMAGE_DIGEST" > "$RUNNER_TEMP/image-digest.txt"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: image-digest-${{ matrix.service.tag }}
           path: ${{ runner.temp }}/image-digest.txt
@@ -177,7 +177,7 @@ jobs:
       website_agent_digest: ${{ steps.collect.outputs.website_agent_digest }}
       run_engine_digest: ${{ steps.collect.outputs.run_engine_digest }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: image-digest-*
           path: digests

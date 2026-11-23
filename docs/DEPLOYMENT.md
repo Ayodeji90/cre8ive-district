@@ -11,7 +11,9 @@ Staging and production run the same four images on Amazon ECS (Fargate):
 | `run-engine` | `ghcr.io/<owner>/cre8ive-run-engine` | no (service discovery) | `GET /health`, `GET /ready` |
 
 Postgres is RDS, Redis is ElastiCache, and object storage stays on Cloudflare
-R2. The frontend stays on Vercel.
+R2. The frontend stays on Vercel. Customer sites use the Vercel-managed wildcard
+domain `*.cre8ivedistrict.app`; the Website Agent's `PRIMARY_DOMAIN_SUFFIX`
+must remain `cre8ivedistrict.app` in staging and production.
 
 ## Release flow
 
@@ -28,6 +30,11 @@ merge to main ──► CI · Backend ──► Deploy · Backend
 Images are deployed as `ghcr.io/<owner>/cre8ive-<service>@sha256:...`
 references, not tags. The build also publishes a commit-derived tag for
 discovery, but deployment and rollback use the captured digests.
+
+All third-party GitHub Actions in the release and CI workflows are pinned to
+reviewed full commit SHAs. Update a pin only by reviewing the upstream release,
+resolving its commit, and changing the adjacent version comment in the same
+pull request.
 
 Automatic release runs only after successful backend CI for a push to `main`.
 Manual **Deploy · Backend** dispatch is staging-only and independently checks
@@ -116,7 +123,7 @@ They are read with `vars.*`, so no secrets are copied into workflows.
 | `AWS_ROLE_ARN` | `arn:aws:iam::123456789012:role/cre8ive-deploy` |
 | `AWS_REGION` | `eu-west-1` |
 | `ECS_CLUSTER` | `cre8ive-production` |
-| `PUBLIC_BASE_URL` | `https://api.cre8ivedistrict.com` |
+| `PUBLIC_BASE_URL` | `https://api.cre8ivedistrict.app` |
 | `ECS_SUBNETS` | `subnet-aaa,subnet-bbb` |
 | `ECS_SECURITY_GROUPS` | `sg-0123456789` |
 | `ECS_ASSIGN_PUBLIC_IP` | `DISABLED` (default) |

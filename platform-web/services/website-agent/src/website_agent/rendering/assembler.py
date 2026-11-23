@@ -62,9 +62,9 @@ class LayoutAssembler:
 
         # 5. Add sitemap.xml
         base_url = (
-            f"https://{site.subdomain}.cre8ive.ng"
+            f"https://{site.subdomain}.cre8ivedistrict.app"
             if site.subdomain
-            else "https://cre8ivedistrict.com"
+            else "https://cre8ivedistrict.app"
         )
         sitemap_items = "\n".join(
             f"  <url><loc>{base_url}/{p.slug}.html</loc><changefreq>weekly</changefreq></url>"
