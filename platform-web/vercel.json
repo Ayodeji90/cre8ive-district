@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @cre8ive/marketing build",
-  "outputDirectory": "apps/marketing/.next",
+  "buildCommand": "pnpm --filter @cre8ive/platform build",
+  "outputDirectory": "apps/platform/.next",
   "cleanUrls": true,
   "trailingSlash": false
 }
