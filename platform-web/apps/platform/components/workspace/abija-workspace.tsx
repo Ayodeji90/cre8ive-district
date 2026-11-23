@@ -9,7 +9,6 @@ import {
   businessesApi,
   websitesApi,
   type Business,
-  type WorkspaceState,
   type ApprovalItem,
 } from "@cre8ive/api-client"
 import { useAbijaChat } from "../../hooks/use-abija-chat"
@@ -233,7 +232,7 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
     setReloadKey((k) => k + 1)
   }, [])
 
-  const handleSelectBusiness = useCallback((biz: Business) => {
+  const handleSelectBusiness = useCallback(() => {
     setIsBusinessMenuOpen(false)
     setIsBusinessFormOpen(false)
     setBusinessFormError(null)
@@ -274,13 +273,13 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
     }
   }, [newBusinessName, newBusinessIndustry])
 
-  const handleApprove = useCallback(async (item: ApprovalItem) => {
+  const handleApprove = useCallback(() => {
     // The approval mutate endpoint lives in the backend; here we optimistically
     // refresh the workspace by bumping the reload key so /state re-fetches.
     setReloadKey((k) => k + 1)
   }, [])
 
-  const handleReject = useCallback(async (item: ApprovalItem) => {
+  const handleReject = useCallback(() => {
     setReloadKey((k) => k + 1)
   }, [])
 
@@ -362,7 +361,7 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
                           <button
                             key={biz.id}
                             type="button"
-                            onClick={() => handleSelectBusiness(biz)}
+                            onClick={() => handleSelectBusiness()}
                             className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
                               isCurrent ? "bg-orange/10 font-bold text-orange" : "text-charcoal hover:bg-grey-50"
                             }`}
@@ -564,9 +563,8 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
                   key={item.id}
                   item={item}
                   label={approvalLabel(item)}
-                  actionable={isActionable(item)}
-                  onApprove={() => handleApprove(item)}
-                  onReject={() => handleReject(item)}
+                  onApprove={() => handleApprove()}
+                  onReject={() => handleReject()}
                   onRetry={() => retry(item.id)}
                 />
               ))}
@@ -580,9 +578,8 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
                   key={item.id}
                   item={item}
                   label={approvalLabel(item)}
-                  actionable={isActionable(item)}
-                  onApprove={() => handleApprove(item)}
-                  onReject={() => handleReject(item)}
+                  onApprove={() => handleApprove()}
+                  onReject={() => handleReject()}
                   onRetry={() => retry(item.id)}
                 />
               ))}
@@ -611,13 +608,12 @@ export function AbijaWorkspace({ businessId: explicitBusinessId }: AbijaWorkspac
 interface ApprovalRowProps {
   item: ApprovalItem
   label: string
-  actionable: boolean
   onApprove: () => void
   onReject: () => void
   onRetry: () => void
 }
 
-function ApprovalRow({ item, label, actionable, onApprove, onReject, onRetry }: ApprovalRowProps) {
+function ApprovalRow({ item, label, onApprove, onReject, onRetry }: ApprovalRowProps) {
   return (
     <div className="flex items-start gap-3 border-b border-grey-50 px-3 py-2 last:border-0">
       <div className="min-w-0 flex-1">

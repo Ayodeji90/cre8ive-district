@@ -107,45 +107,45 @@ async def test_websocket_chat_streaming(customer, session_factory):
             conv_id = conv.id
 
         # Use synchronous TestClient for websocket testing
-        sync_client = TestClient(app)
         token = auth_headers(customer)["Authorization"].split(" ")[1]
-        with sync_client.websocket_connect(f"/api/chat/{conv_id}?token={token}") as ws:
-            # 1. First event should be 'ready'
-            ready = ws.receive_json()
-            assert ready["type"] == "ready"
-            assert ready["conversation_id"] == str(conv_id)
+        with TestClient(app) as sync_client:
+            with sync_client.websocket_connect(f"/api/chat/{conv_id}?token={token}") as ws:
+                # 1. First event should be 'ready'
+                ready = ws.receive_json()
+                assert ready["type"] == "ready"
+                assert ready["conversation_id"] == str(conv_id)
 
-            # 2. Ping-pong test
-            ws.send_json({"type": "ping"})
-            pong = ws.receive_json()
-            assert pong["type"] == "pong"
+                # 2. Ping-pong test
+                ws.send_json({"type": "ping"})
+                pong = ws.receive_json()
+                assert pong["type"] == "pong"
 
-            # 3. Send message and receive streamed chunks + done
-            ws.send_json({"content": "We make handmade beaded bags in Lekki"})
+                # 3. Send message and receive streamed chunks + done
+                ws.send_json({"content": "We make handmade beaded bags in Lekki"})
 
-            received_chunks = []
-            while True:
-                msg = ws.receive_json()
-                if msg["type"] == "chunk":
-                    received_chunks.append(msg["content"])
-                elif msg["type"] == "done":
-                    assert len(received_chunks) > 0
-                    full_text = "".join(received_chunks)
-                    assert full_text == msg["content"]
-                    assert "context" in msg
-                    break
+                received_chunks = []
+                while True:
+                    msg = ws.receive_json()
+                    if msg["type"] == "chunk":
+                        received_chunks.append(msg["content"])
+                    elif msg["type"] == "done":
+                        assert len(received_chunks) > 0
+                        full_text = "".join(received_chunks)
+                        assert full_text == msg["content"]
+                        assert "context" in msg
+                        break
 
-            # 4. Confirmation message triggers ready_to_generate
-            ws.send_json({"content": "Yes, launch my brand!"})
-            chunks2 = []
-            while True:
-                msg = ws.receive_json()
-                if msg["type"] == "chunk":
-                    chunks2.append(msg["content"])
-                elif msg["type"] == "done":
-                    assert "Starting your brand" in msg["content"]
-                    assert msg["context"]["ready_to_generate"] is True
-                    break
+                # 4. Confirmation message triggers ready_to_generate
+                ws.send_json({"content": "Yes, launch my brand!"})
+                chunks2 = []
+                while True:
+                    msg = ws.receive_json()
+                    if msg["type"] == "chunk":
+                        chunks2.append(msg["content"])
+                    elif msg["type"] == "done":
+                        assert "Starting your brand" in msg["content"]
+                        assert msg["context"]["ready_to_generate"] is True
+                        break
     finally:
         app.dependency_overrides.pop(get_ai, None)
 
@@ -173,11 +173,11 @@ async def test_websocket_no_token_rejected(customer, session_factory):
         await db.refresh(conv)
         conv_id = conv.id
 
-    sync_client = TestClient(app)
-    with sync_client.websocket_connect(f"/api/chat/{conv_id}") as ws:
-        msg = ws.receive()
-        assert msg["type"] == "websocket.close"
-        assert msg["code"] == 4401
+    with TestClient(app) as sync_client:
+        with sync_client.websocket_connect(f"/api/chat/{conv_id}") as ws:
+            msg = ws.receive()
+            assert msg["type"] == "websocket.close"
+            assert msg["code"] == 4401
 
 
 @pytest.mark.asyncio
@@ -198,11 +198,11 @@ async def test_websocket_invalid_token_rejected(customer, session_factory):
         await db.refresh(conv)
         conv_id = conv.id
 
-    sync_client = TestClient(app)
-    with sync_client.websocket_connect(f"/api/chat/{conv_id}?token=garbage.token.here") as ws:
-        msg = ws.receive()
-        assert msg["type"] == "websocket.close"
-        assert msg["code"] == 4401
+    with TestClient(app) as sync_client:
+        with sync_client.websocket_connect(f"/api/chat/{conv_id}?token=garbage.token.here") as ws:
+            msg = ws.receive()
+            assert msg["type"] == "websocket.close"
+            assert msg["code"] == 4401
 
 
 @pytest.mark.asyncio
@@ -243,11 +243,11 @@ async def test_websocket_wrong_user_forbidden(session_factory):
         algorithm=settings.JWT_ALGORITHM,
     )
 
-    sync_client = TestClient(app)
-    with sync_client.websocket_connect(f"/api/chat/{conv_id}?token={token_b}") as ws:
-        msg = ws.receive()
-        assert msg["type"] == "websocket.close"
-        assert msg["code"] == 4403
+    with TestClient(app) as sync_client:
+        with sync_client.websocket_connect(f"/api/chat/{conv_id}?token={token_b}") as ws:
+            msg = ws.receive()
+            assert msg["type"] == "websocket.close"
+            assert msg["code"] == 4403
 
 
 @pytest.mark.asyncio

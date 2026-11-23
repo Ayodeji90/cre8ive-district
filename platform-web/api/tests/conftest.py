@@ -10,7 +10,9 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR.parent) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR.parent))
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite://"
+os.environ["DATABASE_URL"] = (
+    "sqlite+aiosqlite:///file:cre8ive_api_tests?mode=memory&cache=shared&uri=true"
+)
 os.environ["JWT_SECRET"] = "test-secret"
 os.environ["ENV"] = "test"
 os.environ["FRONTEND_URLS"] = "http://localhost:3000"
@@ -109,16 +111,29 @@ class FakeStorage:
         self.files.pop(path.lstrip("/"), None)
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def engine():
     import app.db as app_db
 
     engine = app_db.engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Hold an anchor connection so SQLite's shared in-memory database survives
+    # the fresh NullPool connections used by individual event loops.
+    anchor = await engine.connect()
+    async with anchor.begin():
+        await anchor.run_sync(Base.metadata.create_all)
     yield engine
+    async with anchor.begin():
+        await anchor.run_sync(Base.metadata.drop_all)
+    await anchor.close()
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def clean_database(engine):
+    """Reuse one test schema and clear rows instead of rebuilding DDL per test."""
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
 
 
 @pytest_asyncio.fixture

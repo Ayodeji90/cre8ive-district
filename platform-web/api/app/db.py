@@ -31,10 +31,18 @@ settings = get_settings()
 
 engine_kwargs: dict = {"pool_pre_ping": True}
 if "sqlite" in settings.DATABASE_URL:
-    from sqlalchemy.pool import StaticPool
+    from sqlalchemy.pool import NullPool, StaticPool
 
     engine_kwargs["connect_args"] = {"check_same_thread": False}
-    engine_kwargs["poolclass"] = StaticPool
+    if settings.DATABASE_URL.endswith(":memory:") or settings.DATABASE_URL in {
+        "sqlite+aiosqlite://",
+        "sqlite+aiosqlite:///:memory:",
+    }:
+        engine_kwargs["poolclass"] = StaticPool
+    else:
+        # File-backed SQLite is safe across test event loops only when each
+        # loop gets its own DBAPI connection.
+        engine_kwargs["poolclass"] = NullPool
 
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

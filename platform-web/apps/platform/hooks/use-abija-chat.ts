@@ -7,7 +7,6 @@ import {
   businessesApi,
   type ChatResumeRequest,
   type ChatResumeResponse,
-  type ChatMessage,
   type WorkspaceState,
   type ApprovalItem,
 } from '@cre8ive/api-client'
@@ -93,28 +92,6 @@ export interface UseAbijaChatReturn {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseInitialIdeaFromUrl(): string | null {
-  // In the real app this is the caller's responsibility (e.g. read ?idea= from
-  // `useSearchParams`). Here we read location.search so tests can control it
-  // by mutating globalThis.location before rendering the hook.
-  if (typeof window === 'undefined') return null
-  try {
-    const params = new URLSearchParams(window.location.search)
-    const raw = params.get('idea')
-    if (raw == null || raw.trim() === '') return null
-    return raw.trim()
-  } catch {
-    return null
-  }
-}
-
-function resolveWsUrl(conversationId: string, token?: string | null): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-  const wsBase = apiUrl.replace(/^http:\/\//, 'ws://').replace(/^https:\/\//, 'wss://')
-  const query = token ? `?token=${encodeURIComponent(token)}` : ''
-  return `${wsBase}/api/chat/${encodeURIComponent(conversationId)}${query}`
-}
-
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -142,7 +119,9 @@ export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
   const [conversation, setConversation] = useState<AbijaConversation | null>(null)
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalItem[]>([])
   const [recentApprovals, setRecentApprovals] = useState<ApprovalItem[]>([])
-  const [failedApprovalIds, setFailedApprovalIds] = useState<Set<string>>(new Set())
+  // The retry flag itself is not read yet; the workspace surfaces retry from
+  // the approval's execution_status, so only the setter is used.
+  const [, setFailedApprovalIds] = useState<Set<string>>(new Set())
 
   // Track whether we have already performed the first resume for this
   // businessId + initialIdea combination. This ensures initial_idea is sent
@@ -154,7 +133,6 @@ export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
   // Reset the "first resume" flag when the business changes or the explicit
   // idea changes to a fresh value.
   useEffect(() => {
-    const fresh = explicitIdea != null && explicitIdea.trim().length > 0
     // Treat a new business as a fresh start regardless of idea.
     const businessChanged = lastBusinessIdRef.current !== null && lastBusinessIdRef.current !== businessId
     if (businessId === lastBusinessIdRef.current && !businessChanged) {
@@ -163,7 +141,7 @@ export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
     lastBusinessIdRef.current = businessId
     firstResumeDoneRef.current = false
     activeConversationIdRef.current = null
-  }, [businessId])
+  }, [businessId, explicitIdea])
 
   // Ordered load: GET /state  →  POST /chat/resume  →  (WS connect is owned
   // by the workspace; we call api.wsConnect here for testability only).
@@ -303,7 +281,7 @@ export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
           apiLayer.wsConnect(res.conversation_id)
         }
         return res
-      } catch (err) {
+      } catch {
         return null
       }
     },
@@ -317,14 +295,13 @@ export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
     // No-op in the new contract; the workspace should use state.active_conversation.
   }, [conversation?.conversation_id])
 
-  const setContext = useCallback((ctx: ExtractedBrandContext) => {
+  const setContext = useCallback(() => {
     // Legacy compat shim; real context comes from the resume response + WS.
   }, [])
 
   const sendMessage = useCallback((text: string) => {
     // Legacy-compat shim: the real send path is owned by the workspace's
     // ChatWindow via the WebSocket provider.
-    // eslint-disable-next-line no-console
     console.debug('[useAbijaChat] sendMessage shim:', text)
   }, [])
 

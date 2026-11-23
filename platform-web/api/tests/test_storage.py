@@ -26,6 +26,7 @@ async def test_unconfigured_development_storage_uses_local_stub():
 def test_unconfigured_production_storage_still_fails():
     settings = Settings(
         ENV="production",
+        DATABASE_URL="postgresql+asyncpg://cre8ive:test@localhost/cre8ive",
         JWT_SECRET="production-secret",
         SERVICE_API_KEY="service-key",
         BRANDING_AGENT_API_KEY="branding-key",

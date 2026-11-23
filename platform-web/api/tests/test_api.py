@@ -326,7 +326,13 @@ async def test_billing_initialize_creates_order(client, customer, paystack):
     assert history.json()[0]["status"] == "pending"
 
 
-async def test_paystack_webhook_is_signed_and_idempotent(client, customer, session_factory):
+async def test_paystack_webhook_is_signed_and_idempotent(
+    client, customer, session_factory, monkeypatch
+):
+    async def fake_enqueue_brand_generation(business_id):
+        return True
+
+    monkeypatch.setattr("app.services.jobs.enqueue_brand_generation", fake_enqueue_brand_generation)
     settings = get_settings()
     async with session_factory() as db:
         # Business requires owner_id — use the customer fixture
@@ -430,7 +436,11 @@ async def test_brand_generation_forbidden_on_foreign_business(
     assert res.status_code == 403
 
 
-async def test_review_workflow(client, customer, admin, session_factory):
+async def test_review_workflow(client, customer, admin, session_factory, monkeypatch):
+    async def fake_enqueue_asset_render(brand_id):
+        return True
+
+    monkeypatch.setattr("app.services.jobs.enqueue_asset_render", fake_enqueue_asset_render)
     headers = auth_headers(customer)
     admin_headers = auth_headers(admin)
     business = await create_business(client, headers)

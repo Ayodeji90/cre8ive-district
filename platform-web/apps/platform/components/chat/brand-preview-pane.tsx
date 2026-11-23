@@ -31,7 +31,6 @@ export function BrandPreviewPane({
   websiteError,
   websiteAttempts = 0,
   websiteLastAttempt = null,
-  state,
   pendingApprovals,
   recentApprovals,
   approvalLabel,

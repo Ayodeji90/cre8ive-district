@@ -73,8 +73,13 @@ async def test_credits_add_and_deduct(session_factory, customer):
 
 
 @pytest.mark.asyncio
-async def test_credit_pack_payment_grants_credits(session_factory, customer):
+async def test_credit_pack_payment_grants_credits(session_factory, customer, monkeypatch):
     """When a user buys a credit pack, charge.success grants the credits to the business."""
+
+    async def fake_enqueue_brand_generation(business_id):
+        return True
+
+    monkeypatch.setattr("app.services.jobs.enqueue_brand_generation", fake_enqueue_brand_generation)
     async with session_factory() as db:
         biz = Business(
             name="Nairobi Wear",
