@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -119,6 +120,13 @@ class Project(UUIDMixin, TimestampMixin, Base):
 
 class BrandKit(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "brand_kits"
+    __table_args__ = (
+        CheckConstraint("version > 0", name="ck_brand_kits_version_positive"),
+        CheckConstraint(
+            "status IN ('generating', 'ready_for_review', 'approved', 'revision_requested', 'superseded', 'failed')",
+            name="ck_brand_kits_status",
+        ),
+    )
 
     project_id: Mapped[_uuid.UUID] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
@@ -160,6 +168,11 @@ class SiteBuild(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         Index("ix_site_builds_project_version", "project_id", "version", unique=True),
         Index("ix_site_builds_status", "build_status"),
+        CheckConstraint("version > 0", name="ck_site_builds_version_positive"),
+        CheckConstraint(
+            "build_status IN ('queued', 'building', 'preview_ready', 'publishing', 'published', 'failed')",
+            name="ck_site_builds_status",
+        ),
     )
 
     project_id: Mapped[_uuid.UUID] = mapped_column(
@@ -196,7 +209,25 @@ class ApprovalItem(UUIDMixin, TimestampMixin, Base):
     The user must approve or reject before execution."""
 
     __tablename__ = "approval_queue"
-    __table_args__ = (Index("ix_approval_queue_project_status", "project_id", "status"),)
+    __table_args__ = (
+        Index("ix_approval_queue_project_status", "project_id", "status"),
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'expired')",
+            name="ck_approval_queue_status",
+        ),
+        CheckConstraint(
+            "decision IS NULL OR decision IN ('approved', 'rejected', 'expired')",
+            name="ck_approval_queue_decision",
+        ),
+        CheckConstraint(
+            "execution_status IN ('not_started', 'queued', 'running', 'succeeded', 'failed')",
+            name="ck_approval_queue_execution_status",
+        ),
+        CheckConstraint(
+            "execution_status != 'succeeded' OR (executed_at IS NOT NULL AND idempotency_key IS NOT NULL AND execution_outcome IS NOT NULL)",
+            name="ck_approval_queue_execution_completion",
+        ),
+    )
 
     project_id: Mapped[_uuid.UUID] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
@@ -207,8 +238,17 @@ class ApprovalItem(UUIDMixin, TimestampMixin, Base):
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict, nullable=False)
     # pending → approved → rejected → expired
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
-    # When was the action actually executed (after approval)?
+    # Decision and execution are separate durable lifecycle stages. ``status``
+    # remains as a legacy field; ``decision`` is canonical going forward.
+    decision: Mapped[str | None] = mapped_column(String(16))
+    reviewer_id: Mapped[_uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    execution_status: Mapped[str] = mapped_column(String(20), default="not_started", nullable=False)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    execution_outcome: Mapped[dict[str, Any] | None] = mapped_column(JSONType)
+    idempotency_key: Mapped[str | None] = mapped_column(String(200), unique=True)
     # Optional reviewer note
     reviewer_note: Mapped[str | None] = mapped_column(Text)
     # Which agent run created this approval request?
@@ -218,6 +258,12 @@ class ApprovalItem(UUIDMixin, TimestampMixin, Base):
 
     project: Mapped[Project] = relationship(back_populates="approval_queue")
     agent_run: Mapped[AgentRun | None] = relationship()
+
+    @property
+    def summary(self) -> str:
+        """Short human-readable action summary for workspace projections."""
+        value = self.payload_json.get("summary") if self.payload_json else None
+        return str(value or self.action_type.replace("_", " ").capitalize())
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +275,16 @@ class AgentRun(UUIDMixin, TimestampMixin, Base):
     """A single invocation of Abija's autonomous loop for a project."""
 
     __tablename__ = "agent_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running', 'paused_needs_approval', 'completed', 'failed', 'cancelled')",
+            name="ck_agent_runs_status",
+        ),
+        CheckConstraint(
+            "credits_budget >= 0 AND credits_used >= 0 AND max_iterations > 0 AND iteration_count >= 0",
+            name="ck_agent_runs_counters",
+        ),
+    )
 
     project_id: Mapped[_uuid.UUID] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True

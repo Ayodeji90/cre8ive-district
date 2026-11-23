@@ -1,5 +1,9 @@
+import asyncio
 import re
 import uuid
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -23,6 +27,22 @@ class ChatResumeRequest(BaseModel):
 
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
+_chat_resume_locks: dict[tuple[uuid.UUID, uuid.UUID], asyncio.Lock] = {}
+
+
+def _serialize_chat_resume(handler: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    """Serialize same-process resumes; the database slot covers other workers."""
+
+    @wraps(handler)
+    async def wrapped(*args: Any, **kwargs: Any) -> Any:
+        business_id = kwargs["business_id"]
+        user: User = kwargs["user"]
+        key = (business_id, user.id)
+        lock = _chat_resume_locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            return await handler(*args, **kwargs)
+
+    return wrapped
 
 
 def slugify(value: str) -> str:
@@ -192,6 +212,7 @@ async def get_workspace_state(
 
 
 @router.post("/{business_id}/chat/resume", response_model=ChatResumeResponse)
+@_serialize_chat_resume
 async def resume_or_start_chat(
     business_id: uuid.UUID,
     payload: ChatResumeRequest | None = Body(default=None),
@@ -250,6 +271,7 @@ async def resume_or_start_chat(
         return ChatResumeResponse(
             conversation_id=existing.id,
             mode="resumed",
+            business_id=business.id,
             context=existing.context or {},
         )
 
@@ -279,6 +301,7 @@ async def resume_or_start_chat(
         return ChatResumeResponse(
             conversation_id=recheck.id,
             mode="resumed",
+            business_id=business.id,
             context=recheck.context or {},
         )
 
@@ -304,6 +327,7 @@ async def resume_or_start_chat(
             return ChatResumeResponse(
                 conversation_id=claimed,
                 mode="resumed",
+                business_id=business.id,
                 context=stale_check.context or {},
             )
         # Slot is stale or the conversation vanished — clear it and fall
@@ -337,6 +361,7 @@ async def resume_or_start_chat(
     return ChatResumeResponse(
         conversation_id=conversation.id,
         mode="new",
-        greeting_message=greeting.content,
+        business_id=business.id,
+        greeting=greeting.content,
         context=conversation.context or {},
     )

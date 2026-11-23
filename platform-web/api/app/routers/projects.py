@@ -11,7 +11,7 @@ Remove the header gate once the frontend is ready to adopt Project state.
 """
 
 import uuid
-from datetime import UTC
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import func, select
@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.models import User
+from app.models import Business, User
 from app.models.project import (
     AgentRun,
     ApprovalItem,
@@ -307,8 +307,10 @@ async def list_approvals(
 ) -> list[ApprovalItem]:
     await _get_project(db, project_id, user)
     stmt = select(ApprovalItem).where(ApprovalItem.project_id == project_id)
-    if status_filter:
-        stmt = stmt.where(ApprovalItem.status == status_filter)
+    if status_filter == "pending":
+        stmt = stmt.where(ApprovalItem.decision.is_(None))
+    elif status_filter:
+        stmt = stmt.where(ApprovalItem.decision == status_filter)
     stmt = stmt.order_by(ApprovalItem.created_at.desc())
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -323,7 +325,7 @@ async def list_pending_approvals(
     await _get_project(db, project_id, user)
     result = await db.execute(
         select(ApprovalItem)
-        .where(ApprovalItem.project_id == project_id, ApprovalItem.status == "pending")
+        .where(ApprovalItem.project_id == project_id, ApprovalItem.decision.is_(None))
         .order_by(ApprovalItem.created_at.desc())
     )
     return list(result.scalars().all())
@@ -344,12 +346,9 @@ async def decide_approval(
     if item.status != "pending":
         raise HTTPException(status_code=409, detail="This approval is no longer pending")
 
-    item.status = payload.decision
-    item.reviewer_note = payload.reviewer_note
-    if payload.decision == "approved":
-        from datetime import datetime
-
-        item.executed_at = datetime.now(UTC)
+    item.decision = payload.decision
+    item.reviewer_id = user.id
+    item.decided_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(item)
     return item
@@ -388,7 +387,10 @@ async def start_run(
     if payload.project_id != project_id:
         raise HTTPException(status_code=400, detail="project_id in body must match the URL")
 
-    budget = min(payload.credits_budget or project.credit_balance, project.credit_balance)
+    business = await db.get(Business, project.business_id) if project.business_id else None
+    if business is None:
+        raise HTTPException(status_code=409, detail="Project is not linked to a workspace")
+    budget = min(payload.credits_budget or business.credit_balance, business.credit_balance)
     if budget < 1:
         raise HTTPException(status_code=402, detail="No credits available for a run")
 

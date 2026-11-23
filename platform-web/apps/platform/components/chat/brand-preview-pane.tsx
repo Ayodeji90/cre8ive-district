@@ -1,6 +1,7 @@
 "use client";
 
 import type { ExtractedBrandContext } from "../../hooks/use-abija-chat";
+import type { WorkspaceState, ApprovalItem } from "@cre8ive/api-client";
 
 interface BrandPreviewPaneProps {
   context: ExtractedBrandContext;
@@ -11,6 +12,14 @@ interface BrandPreviewPaneProps {
   websiteError?: string | null;
   websiteAttempts?: number;
   websiteLastAttempt?: string | null;
+  state?: WorkspaceState | null;
+  pendingApprovals?: ApprovalItem[];
+  recentApprovals?: ApprovalItem[];
+  approvalLabel?: (item: ApprovalItem) => string;
+  isActionable?: (item: ApprovalItem) => boolean;
+  onApprove?: (item: ApprovalItem) => void;
+  onReject?: (item: ApprovalItem) => void;
+  onRetry?: (approvalId: string) => void;
 }
 
 export function BrandPreviewPane({
@@ -22,6 +31,14 @@ export function BrandPreviewPane({
   websiteError,
   websiteAttempts = 0,
   websiteLastAttempt = null,
+  state,
+  pendingApprovals,
+  recentApprovals,
+  approvalLabel,
+  isActionable,
+  onApprove,
+  onReject,
+  onRetry,
 }: BrandPreviewPaneProps) {
   const brandName = context.business_name || "Your Brand Name";
   const industry = context.industry || "African Commerce";
@@ -185,6 +202,72 @@ export function BrandPreviewPane({
           <span className="text-xs font-semibold text-orange">Standby</span>
         </div>
       </div>
+
+      {/* Approvals summary (new workspace contract; no-op for legacy callers) */}
+      {pendingApprovals && pendingApprovals.length > 0 && (
+        <div className="mt-6 space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-grey-600">Needs Your OK</p>
+          {pendingApprovals.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 rounded-xl border border-grey-200 bg-white p-3.5 shadow-2xs">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-charcoal">{item.action_type}</p>
+                <p className="text-[11px] text-grey-500">{item.summary}</p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-grey-400">
+                  {approvalLabel ? approvalLabel(item) : "Pending"}
+                </p>
+              </div>
+              {isActionable && isActionable(item) && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {item.decision === null && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onApprove?.(item)}
+                        className="rounded-md bg-green-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onReject?.(item)}
+                        className="rounded-md border border-grey-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-charcoal hover:bg-grey-50"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {(item.decision === "approved" && item.execution_status === "failed") && (
+                    <button
+                      type="button"
+                      onClick={() => onRetry?.(item.id)}
+                      className="rounded-md bg-orange px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-orange/90"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {recentApprovals && recentApprovals.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-grey-600">Recent</p>
+          {recentApprovals.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 rounded-xl border border-grey-100 bg-grey-50 p-3.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-charcoal">{item.action_type}</p>
+                <p className="text-[11px] text-grey-500">{item.summary}</p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-grey-400">
+                  {approvalLabel ? approvalLabel(item) : "Done"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Launch Action */}
       <div className="mt-auto pt-6">

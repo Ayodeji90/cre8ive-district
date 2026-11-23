@@ -35,6 +35,10 @@
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
-    "tailwindcss": "^4.1.16"
+    "tailwindcss": "^4.1.16",
+    "jsdom": "^25.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@vitejs/plugin-react": "^4.4.0"
   }
 }

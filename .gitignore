@@ -9,3 +9,7 @@ codebase.md
 **/__pycache__/
 *.py[cod]
 **/.pytest_cache/
+
+# Local virtualenvs and runtime temp logs
+api-venv/
+.tmp/

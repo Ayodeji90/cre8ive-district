@@ -10,12 +10,22 @@ Covers:
    support FOR UPDATE, but validates the response schema)
 """
 
+import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from app.models import Business, Conversation, User
+from app.models import (
+    AgentRun,
+    ApprovalItem,
+    BrandKit,
+    Business,
+    Conversation,
+    Project,
+    SiteBuild,
+    User,
+)
 from tests.conftest import auth_headers
 
 # ---------------------------------------------------------------------------
@@ -82,12 +92,74 @@ async def test_workspace_state_returns_business_data(client, session_factory, cu
     assert res.status_code == 200
     data = res.json()
 
-    assert data["business_id"] == str(biz.id)
-    assert data["name"] == "Aso Dye Studio"
-    assert data["credit_balance"] == 50
-    assert data["plan"] == "free"
-    assert data["conversation"] is None  # no conversations yet
-    assert data["pending_approvals"] == 0
+    assert data["business"]["id"] == str(biz.id)
+    assert data["business"]["name"] == "Aso Dye Studio"
+    assert data["business"]["credit_balance"] == 50
+    assert data["business"]["plan"] == "free"
+    assert data["active_conversation"] is None  # no conversations yet
+    assert data["pending_approvals"] == []
+    assert data["pending_approval_count"] == 0
+    assert data["project_id"] is None
+    assert data["latest_brand_kit"] is None
+    assert data["latest_site_build"] is None
+    assert data["active_runs"] == []
+    assert data["recent_approvals"] == []
+
+
+@pytest.mark.asyncio
+async def test_workspace_state_returns_canonical_project_projections(
+    client, session_factory, customer
+):
+    biz = await _create_business(session_factory, customer.id, "Projection Biz", "projection-biz")
+    project = Project(
+        user_id=customer.id,
+        business_id=biz.id,
+        slug="projection-project",
+        name="Projection Biz",
+    )
+    async with session_factory() as db:
+        db.add(project)
+        await db.flush()
+        kit = BrandKit(project_id=project.id, version=2, brand_name="Canonical Brand")
+        build = SiteBuild(project_id=project.id, version=3, preview_url="https://preview.test")
+        run = AgentRun(project_id=project.id, user_id=customer.id, goal="Build the requested brand")
+        approval = ApprovalItem(
+            project_id=project.id,
+            action_type="deploy_site",
+            payload_json={"site": "preview"},
+        )
+        db.add_all([kit, build, run, approval])
+        await db.commit()
+        await db.refresh(kit)
+        await db.refresh(build)
+        await db.refresh(run)
+        await db.refresh(approval)
+
+    response = await client.get(f"/api/businesses/{biz.id}/state", headers=auth_headers(customer))
+    assert response.status_code == 200, response.text
+    state = response.json()
+    assert state["project_id"] == str(project.id)
+    assert state["latest_brand_kit"]["id"] == str(kit.id)
+    assert state["latest_site_build"]["id"] == str(build.id)
+    assert state["business"]["id"] == str(biz.id)
+    assert [item["id"] for item in state["active_runs"]] == [str(run.id)]
+    assert state["pending_approval_count"] == 1
+    assert [item["id"] for item in state["pending_approvals"]] == [str(approval.id)]
+    assert state["pending_approvals"][0]["decision"] is None
+    assert [item["id"] for item in state["recent_approvals"]] == [str(approval.id)]
+    assert set(state) == {
+        "business",
+        "project_id",
+        "latest_brand_kit",
+        "latest_site_build",
+        "active_conversation",
+        "active_runs",
+        "pending_approvals",
+        "pending_approval_count",
+        "recent_approvals",
+        "brand",
+        "website",
+    }
 
 
 @pytest.mark.asyncio
@@ -105,9 +177,9 @@ async def test_workspace_state_prefers_active_over_idle(client, session_factory,
     assert res.status_code == 200
     data = res.json()
 
-    assert data["conversation"] is not None
-    assert data["conversation"]["id"] == str(active_convo.id)
-    assert data["conversation"]["status"] == "active"
+    assert data["active_conversation"] is not None
+    assert data["active_conversation"]["id"] == str(active_convo.id)
+    assert data["active_conversation"]["status"] == "active"
 
 
 @pytest.mark.asyncio
@@ -126,7 +198,7 @@ async def test_workspace_state_prefers_active_over_closed(client, session_factor
     res = await client.get(f"/api/businesses/{biz.id}/state", headers=headers)
     assert res.status_code == 200
 
-    convo = res.json()["conversation"]
+    convo = res.json()["active_conversation"]
     assert convo["id"] == str(active_convo.id)
     assert convo["status"] == "active"
 
@@ -143,7 +215,7 @@ async def test_workspace_state_prefers_idle_over_closed(client, session_factory,
     res = await client.get(f"/api/businesses/{biz.id}/state", headers=headers)
     assert res.status_code == 200
 
-    convo = res.json()["conversation"]
+    convo = res.json()["active_conversation"]
     assert convo["id"] == str(idle_convo.id)
     assert convo["status"] == "idle"
 
@@ -164,7 +236,8 @@ async def test_chat_resume_creates_new_conversation(client, session_factory, cus
 
     assert data["mode"] == "new"
     assert "conversation_id" in data
-    assert data["greeting_message"] is not None
+    assert data["business_id"] == str(biz.id)
+    assert data["greeting"] is not None
     assert isinstance(data["context"], dict)
 
 
@@ -186,6 +259,76 @@ async def test_chat_resume_returns_same_conversation(client, session_factory, cu
     data2 = res2.json()
     assert data2["mode"] == "resumed"
     assert data2["conversation_id"] == data1["conversation_id"]
+
+
+@pytest.mark.asyncio
+async def test_chat_resume_persists_initial_idea_only_for_new_conversation(
+    client, session_factory, customer
+):
+    from app.models import Message
+
+    biz = await _create_business(session_factory, customer.id, "Idea Biz", "idea-biz")
+    headers = auth_headers(customer)
+    first = await client.post(
+        f"/api/businesses/{biz.id}/chat/resume",
+        headers=headers,
+        json={"initial_idea": "A handmade ceramics studio in Lagos"},
+    )
+    assert first.status_code == 200, first.text
+    second = await client.post(
+        f"/api/businesses/{biz.id}/chat/resume",
+        headers=headers,
+        json={"initial_idea": "This should not be duplicated"},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["conversation_id"] == first.json()["conversation_id"]
+    async with session_factory() as db:
+        messages = list(
+            (
+                await db.execute(
+                    select(Message).where(
+                        Message.conversation_id == uuid.UUID(first.json()["conversation_id"]),
+                        Message.content.in_(
+                            ["A handmade ceramics studio in Lagos", "This should not be duplicated"]
+                        ),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert [message.content for message in messages] == ["A handmade ceramics studio in Lagos"]
+
+
+@pytest.mark.asyncio
+async def test_chat_resume_ignores_initial_idea_when_active_conversation_exists(
+    client, session_factory, customer
+):
+    from app.models import Message
+
+    biz = await _create_business(
+        session_factory, customer.id, "Existing Chat Biz", "existing-chat-biz"
+    )
+    existing = await _create_conversation(session_factory, biz.id, customer.id, status="active")
+    response = await client.post(
+        f"/api/businesses/{biz.id}/chat/resume",
+        headers=auth_headers(customer),
+        json={"initial_idea": "Do not attach this to an existing conversation"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["mode"] == "resumed"
+    assert body["conversation_id"] == str(existing.id)
+    async with session_factory() as db:
+        count = await db.scalar(
+            select(func.count())
+            .select_from(Message)
+            .where(
+                Message.conversation_id == existing.id,
+                Message.content == "Do not attach this to an existing conversation",
+            )
+        )
+    assert count == 0
 
 
 @pytest.mark.asyncio
@@ -221,7 +364,7 @@ async def test_chat_resume_reactivates_idle_conversation(client, session_factory
 
     # Verify it's now active in the workspace state
     state_res = await client.get(f"/api/businesses/{biz.id}/state", headers=headers)
-    convo = state_res.json()["conversation"]
+    convo = state_res.json()["active_conversation"]
     assert convo["status"] == "active"
 
 
@@ -344,9 +487,11 @@ async def test_concurrent_resume_produces_valid_responses(client, session_factor
     biz = await _create_business(session_factory, customer.id, "Concurrent Biz", "concurrent-biz")
     headers = auth_headers(customer)
 
-    # Fire two sequential requests (can't truly test concurrent with ASGI test client)
-    res1 = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
-    res2 = await client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers)
+    # Overlap both requests to exercise the per-workspace claim slot.
+    res1, res2 = await asyncio.gather(
+        client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers),
+        client.post(f"/api/businesses/{biz.id}/chat/resume", headers=headers),
+    )
 
     assert res1.status_code == 200
     assert res2.status_code == 200
@@ -360,10 +505,8 @@ async def test_concurrent_resume_produces_valid_responses(client, session_factor
         assert d["mode"] in ("new", "resumed")
         assert isinstance(d.get("context", {}), dict)
 
-    # First is new, second should be resumed with same id
-    assert d1["mode"] == "new"
-    assert d2["mode"] == "resumed"
-    assert d2["conversation_id"] == d1["conversation_id"]
+    assert d1["conversation_id"] == d2["conversation_id"]
+    assert sorted((d1["mode"], d2["mode"])) == ["new", "resumed"]
 
 
 # ---------------------------------------------------------------------------
@@ -385,9 +528,10 @@ async def test_chat_resume_response_schema(client, session_factory, customer):
     assert "mode" in data
     assert "context" in data
 
-    # greeting_message present for new conversations
+    assert data["business_id"] == str(biz.id)
+    # greeting present for new conversations
     if data["mode"] == "new":
-        assert "greeting_message" in data
+        assert "greeting" in data
 
     # No unexpected raw dict fields (should be a proper serialized response)
     uuid.UUID(data["conversation_id"])  # validates it's a proper UUID string

@@ -7,9 +7,35 @@ by the blueprint and the founder.
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.project import (
+    AgentRunResponse,
+    ApprovalItemResponse,
+    BrandKitResponse,
+    SiteBuildResponse,
+)
+
+
+class BusinessSummary(BaseModel):
+    """Canonical business profile and billing projection."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    description: str | None
+    industry: str | None
+    location: str | None
+    contact_phone: str | None
+    contact_email: str | None
+    plan: str
+    credit_balance: int
+    status: str
+    preferences: dict[str, Any]
 
 
 class BrandSummary(BaseModel):
@@ -58,29 +84,26 @@ class WorkspaceStateResponse(BaseModel):
     conversation (if any), and credit balance.
     """
 
-    # Business identity
-    business_id: uuid.UUID
-    name: str
-    slug: str
-    description: str | None
-    industry: str | None
-    location: str | None
-    contact_phone: str | None
-    contact_email: str | None
-    plan: str
-    credit_balance: int
-    status: str
-    preferences: dict[str, Any]
+    business: BusinessSummary
+
+    # Canonical Project state linked by Business.id. Project's duplicated
+    # billing/profile fields remain compatibility snapshots only.
+    project_id: uuid.UUID | None = None
+    latest_brand_kit: BrandKitResponse | None = None
+    latest_site_build: SiteBuildResponse | None = None
+    active_runs: list[AgentRunResponse] = Field(default_factory=list)
 
     # Latest deliverables (null until generated)
     brand: BrandSummary | None = None
     website: WebsiteSummary | None = None
 
     # Active or most recent conversation (null if never chatted)
-    conversation: ConversationSummary | None = None
+    active_conversation: ConversationSummary | None = None
 
-    # Counts for UI badges
-    pending_approvals: int = 0
+    # Pending items are the primary projection; count is explicit for badges.
+    pending_approvals: list[ApprovalItemResponse] = Field(default_factory=list)
+    pending_approval_count: int = 0
+    recent_approvals: list[ApprovalItemResponse] = Field(default_factory=list)
 
 
 class ChatResumeResponse(BaseModel):
@@ -91,6 +114,7 @@ class ChatResumeResponse(BaseModel):
     """
 
     conversation_id: uuid.UUID
-    mode: str  # "resumed" | "new"
-    context: dict[str, Any] = {}
-    greeting_message: str | None = None
+    mode: Literal["resumed", "new"]
+    business_id: uuid.UUID
+    context: dict[str, Any] = Field(default_factory=dict)
+    greeting: str | None = None

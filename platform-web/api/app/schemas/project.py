@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -53,6 +53,7 @@ class ProjectResponse(BaseModel):
     location: str | None
     contact_phone: str | None
     contact_email: str | None
+    # Deprecated compatibility snapshots. Business is authoritative for these.
     plan: str
     credit_balance: int
     status: str
@@ -97,7 +98,9 @@ class BrandKitUpdate(BaseModel):
     typography_json: dict[str, Any] | None = None
     logo_svg: str | None = None
     offer_tiers_json: dict[str, Any] | None = None
-    status: str | None = None
+    status: Literal["generating", "ready_for_review", "approved", "superseded", "failed"] | None = (
+        None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -138,15 +141,14 @@ class ApprovalItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    project_id: uuid.UUID
-    action_type: str
-    payload_json: dict[str, Any]
-    status: str
-    executed_at: datetime | None
-    reviewer_note: str | None
     agent_run_id: uuid.UUID | None
-    created_at: datetime
-    updated_at: datetime
+    action_type: str
+    summary: str
+    decision: Optional[Literal["approved", "rejected", "expired"]] = None  # noqa: UP045
+    decided_at: datetime | None
+    execution_status: Literal["not_started", "queued", "running", "succeeded", "failed"]
+    executed_at: datetime | None
+    execution_outcome: dict[str, Any] | None
 
 
 class ApprovalDecision(BaseModel):

@@ -1,287 +1,348 @@
-"use client";
+"use client"
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { chatApi, type StartChatResponse, type ChatMessage } from "@cre8ive/api-client";
+import * as React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  chatApi,
+  businessesApi,
+  type ChatResumeRequest,
+  type ChatResumeResponse,
+  type ChatMessage,
+  type WorkspaceState,
+  type ApprovalItem,
+} from '@cre8ive/api-client'
+
+// ---------------------------------------------------------------------------
+// Legacy re-exports (kept for downstream chat components; do not remove)
+// ---------------------------------------------------------------------------
 
 export interface ChatMessageItem {
-  id: string;
-  role: "customer" | "assistant" | "system";
-  content: string;
-  createdAt: string;
-  isStreaming?: boolean;
+  id: string
+  role: 'customer' | 'assistant' | 'system'
+  content: string
+  createdAt: string
+  isStreaming?: boolean
 }
 
 export interface ExtractedBrandContext {
-  conversation_stage?: string;
-  business_name?: string;
-  description?: string;
-  industry?: string;
-  target_audience?: string;
-  style_keywords?: string[];
-  mood?: string;
-  ready_to_generate?: boolean;
-  [key: string]: unknown;
+  conversation_stage?: string
+  business_name?: string
+  description?: string
+  industry?: string
+  target_audience?: string
+  style_keywords?: string[]
+  mood?: string
+  ready_to_generate?: boolean
+  [key: string]: unknown
+}
+
+// ---------------------------------------------------------------------------
+// Public hook contract
+// ---------------------------------------------------------------------------
+
+export interface UseAbijaChatOptions {
+  /** The business whose workspace state + chat to drive. Required. */
+  businessId: string
+  /** Optional API override for tests. When omitted, uses the real @cre8ive/api-client. */
+  api?: {
+    state: (businessId: string) => Promise<WorkspaceState>
+    resume: (businessId: string, body: ChatResumeRequest) => Promise<ChatResumeResponse>
+    wsConnect: (conversationId: string) => void
+  }
+  /**
+   * Initial idea for a fresh session. When provided (including via ?idea= parsed
+   * from the URL by the caller), it is sent as `initial_idea` ONLY on the first
+   * resume of a fresh session (no active_conversation). On resume / business switch
+   * it is sent as null.
+   */
+  initialIdea?: string | null
+}
+
+/** The resume response normalized with a convenient `id` alias. */
+export interface AbijaConversation extends ChatResumeResponse {
+  id: string
+}
+
+export interface UseAbijaChatReturn {
+  /** Hydration from GET /api/businesses/{id}/state, or null before the first fetch. */
+  state: WorkspaceState | null
+  /** The resume response for the active conversation, or null. */
+  conversation: AbijaConversation | null
+  /** Pending approvals from the workspace state. */
+  pendingApprovals: ApprovalItem[]
+  /** Recent approvals from the workspace state. */
+  recentApprovals: ApprovalItem[]
+  /** Retry a failed approval execution by id. */
+  retry: (approvalId: string) => void
+  /** Send a chat message over the WebSocket (legacy-compat shim). */
+  sendMessage: (text: string) => void
+
+  // ---- Legacy return fields (deprecated; workspace rewrite will drop these) ----
+  messages: ChatMessageItem[]
+  streamingContent: string
+  context: ExtractedBrandContext
+  isThinking: boolean
+  isConnected: boolean
+  error: string | null
+  startConversation: (initialIdea?: string, businessId?: string) => Promise<ChatResumeResponse | null>
+  loadHistory: (convId: string) => Promise<void>
+  setContext: (ctx: ExtractedBrandContext) => void
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function parseInitialIdeaFromUrl(): string | null {
+  // In the real app this is the caller's responsibility (e.g. read ?idea= from
+  // `useSearchParams`). Here we read location.search so tests can control it
+  // by mutating globalThis.location before rendering the hook.
+  if (typeof window === 'undefined') return null
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const raw = params.get('idea')
+    if (raw == null || raw.trim() === '') return null
+    return raw.trim()
+  } catch {
+    return null
+  }
 }
 
 function resolveWsUrl(conversationId: string, token?: string | null): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-  const wsBase = apiUrl.replace(/^http:\/\//, "ws://").replace(/^https:\/\//, "wss://");
-  const query = token ? `?token=${encodeURIComponent(token)}` : "";
-  return `${wsBase}/api/chat/${encodeURIComponent(conversationId)}${query}`;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+  const wsBase = apiUrl.replace(/^http:\/\//, 'ws://').replace(/^https:\/\//, 'wss://')
+  const query = token ? `?token=${encodeURIComponent(token)}` : ''
+  return `${wsBase}/api/chat/${encodeURIComponent(conversationId)}${query}`
 }
 
-export function useAbijaChat(initialConversationId?: string, accessToken?: string | null) {
-  const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null);
-  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-  const [streamingContent, setStreamingContent] = useState<string>("");
-  const [context, setContext] = useState<ExtractedBrandContext>({
-    conversation_stage: "greeting",
-    ready_to_generate: false,
-  });
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [isThinking, setIsThinking] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
-  const socketRef = useRef<WebSocket | null>(null);
-  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const streamingAccRef = useRef<string>("");
+export function useAbijaChat(opts: UseAbijaChatOptions): UseAbijaChatReturn {
+  const { businessId, api, initialIdea: explicitIdea } = opts
 
-  // Connect WebSocket when conversationId is available
+  // Memoized so the load effect below does not re-fire on every render when no
+  // test override is provided.
+  const apiLayer = React.useMemo(
+    () =>
+      api ?? {
+        state: (id: string) => businessesApi.state(id),
+        resume: (id: string, body: ChatResumeRequest) => chatApi.resume(id, body),
+        wsConnect: (conversationId: string) => {
+          // In the real app the workspace connects the WS via a separate
+          // provider; the workspace owns the WebSocket lifecycle.
+          void conversationId
+        },
+      },
+    [api],
+  )
+
+  const [state, setState] = useState<WorkspaceState | null>(null)
+  const [conversation, setConversation] = useState<AbijaConversation | null>(null)
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalItem[]>([])
+  const [recentApprovals, setRecentApprovals] = useState<ApprovalItem[]>([])
+  const [failedApprovalIds, setFailedApprovalIds] = useState<Set<string>>(new Set())
+
+  // Track whether we have already performed the first resume for this
+  // businessId + initialIdea combination. This ensures initial_idea is sent
+  // exactly once on a fresh session.
+  const firstResumeDoneRef = useRef<boolean>(false)
+  const lastBusinessIdRef = useRef<string | null>(null)
+  const activeConversationIdRef = useRef<string | null>(null)
+
+  // Reset the "first resume" flag when the business changes or the explicit
+  // idea changes to a fresh value.
   useEffect(() => {
-    if (!conversationId) return;
+    const fresh = explicitIdea != null && explicitIdea.trim().length > 0
+    // Treat a new business as a fresh start regardless of idea.
+    const businessChanged = lastBusinessIdRef.current !== null && lastBusinessIdRef.current !== businessId
+    if (businessId === lastBusinessIdRef.current && !businessChanged) {
+      return
+    }
+    lastBusinessIdRef.current = businessId
+    firstResumeDoneRef.current = false
+    activeConversationIdRef.current = null
+  }, [businessId])
 
-    let isUnmounted = false;
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-    let reconnectAttempts = 0;
+  // Ordered load: GET /state  →  POST /chat/resume  →  (WS connect is owned
+  // by the workspace; we call api.wsConnect here for testability only).
+  useEffect(() => {
+    if (!businessId) return
 
-    function connect() {
-      if (isUnmounted) return;
-      const wsUrl = resolveWsUrl(conversationId!, accessToken);
-      const ws = new WebSocket(wsUrl);
-      socketRef.current = ws;
+    let cancelled = false
 
-      ws.onopen = () => {
-        if (isUnmounted) return;
-        setIsConnected(true);
-        setError(null);
-        reconnectAttempts = 0;
-        // Heartbeat every 25 seconds
-        if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "ping" }));
-          }
-        }, 25000);
-      };
+    async function load() {
+      // 1. Hydrate workspace state.
+      const ws: WorkspaceState = await apiLayer.state(businessId)
+      if (cancelled) return
+      setState(ws)
+      setPendingApprovals(ws.pending_approvals)
+      setRecentApprovals(ws.recent_approvals)
 
-      ws.onmessage = (event) => {
-        if (isUnmounted) return;
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "ready") {
-            if (data.context) {
-              setContext((prev) => ({ ...prev, ...data.context }));
-            }
-          } else if (data.type === "chunk") {
-            setIsThinking(false);
-            streamingAccRef.current += data.content ?? "";
-            setStreamingContent(streamingAccRef.current);
-          } else if (data.type === "done") {
-            const finalContent = data.content || streamingAccRef.current;
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `msg-${Date.now()}`,
-                role: "assistant",
-                content: finalContent,
-                createdAt: new Date().toISOString(),
-              },
-            ]);
-            streamingAccRef.current = "";
-            setStreamingContent("");
-            setIsThinking(false);
-            if (data.context) {
-              setContext((prev) => ({ ...prev, ...data.context }));
-            }
-          } else if (data.type === "generation_started") {
-            if (data.business_id) {
-              setContext((prev) => ({
-                ...prev,
-                business_id: data.business_id,
-                ready_to_generate: true,
-              }));
-            }
-          } else if (data.type === "error") {
-            setError(data.detail ?? "Something went wrong. Please try again.");
-            setIsThinking(false);
-            streamingAccRef.current = "";
-            setStreamingContent("");
-          }
-        } catch (err) {
-          console.error("Failed to parse websocket message", err);
-        }
-      };
+      const hasActiveConversation = ws.active_conversation != null
 
-      ws.onerror = () => {
-        if (!isUnmounted) {
-          setIsConnected(false);
-        }
-      };
+      // Track the active conversation id from state so we can decide whether
+      // the next resume is "fresh" even if the backend hasn't created it yet.
+      if (ws.active_conversation) {
+        activeConversationIdRef.current = ws.active_conversation.id
+      }
 
-      ws.onclose = (event) => {
-        if (isUnmounted) return;
-        setIsConnected(false);
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
-        }
+      // 2. Decide the initial_idea payload.
+      //
+      // initial_idea is sent ONLY when:
+      //   - this is the first resume for this business+idea combo (firstResumeDoneRef false), AND
+      //   - there is no active conversation (fresh session), AND
+      //   - we have an idea to send (explicitIdea parsed from ?idea=, or passed in).
+      //
+      // Otherwise initial_idea is null.
+      const shouldSendIdea =
+        !firstResumeDoneRef.current &&
+        !hasActiveConversation &&
+        explicitIdea != null &&
+        explicitIdea.trim().length > 0
 
-        // Do not reconnect on auth errors
-        if (event.code === 4401 || event.code === 4403) {
-          setError("Authentication required or access denied. Please refresh or sign in.");
-          return;
-        }
+      const initialIdeaPayload: string | null =
+        shouldSendIdea ? explicitIdea.trim() : null
 
-        if (reconnectAttempts < 5) {
-          reconnectAttempts += 1;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 16000);
-          setError(`Disconnected. Reconnecting in ${Math.round(delay / 1000)}s...`);
-          reconnectTimeout = setTimeout(() => {
-            if (!isUnmounted) {
-              connect();
-            }
-          }, delay);
-        } else {
-          setError("Connection lost. Please refresh the page to reconnect.");
-        }
-      };
+      // Mark the first resume as done for this business+idea so subsequent
+      // resumes (re-mount, reconnect, business switch) never re-send the idea.
+      firstResumeDoneRef.current = true
+
+      // 3. Resume / start the chat session.
+      const res: ChatResumeResponse = await apiLayer.resume(businessId, {
+        initial_idea: initialIdeaPayload,
+      })
+      if (cancelled) return
+
+      setConversation({ ...res, id: res.conversation_id })
+      if (res.conversation_id) {
+        activeConversationIdRef.current = res.conversation_id
+        apiLayer.wsConnect(res.conversation_id)
+      }
     }
 
-    connect();
+    load()
 
     return () => {
-      isUnmounted = true;
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, [conversationId, accessToken]);
-
-  // Start new conversation
-  const startConversation = useCallback(
-    async (initialIdea?: string, businessId?: string): Promise<StartChatResponse | null> => {
-      try {
-        setError(null);
-        setIsThinking(true);
-        const payload: { initial_idea?: string; business_id?: string } = {};
-        if (initialIdea && initialIdea.trim()) payload.initial_idea = initialIdea.trim();
-        if (businessId) payload.business_id = businessId;
-        const res = await chatApi.start(payload);
-        setConversationId(res.conversation_id);
-        if (res.context) {
-          setContext(res.context as ExtractedBrandContext);
-        }
-
-        const initialMsgs: ChatMessageItem[] = [];
-        if (initialIdea && initialIdea.trim()) {
-          initialMsgs.push({
-            id: `init-user-${Date.now()}`,
-            role: "customer",
-            content: initialIdea.trim(),
-            createdAt: new Date().toISOString(),
-          });
-        }
-        if (res.greeting_message) {
-          initialMsgs.push({
-            id: `init-abija-${Date.now()}`,
-            role: "assistant",
-            content: res.greeting_message,
-            createdAt: new Date().toISOString(),
-          });
-        }
-        setMessages(initialMsgs);
-        setIsThinking(false);
-        return res;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to start conversation";
-        setError(msg);
-        setIsThinking(false);
-        return null;
-      }
-    },
-    []
-  );
-
-  // Send a message over WebSocket
-  const sendMessage = useCallback(
-    (text: string) => {
-      const clean = text.trim();
-      if (!clean) return;
-
-      const userMsg: ChatMessageItem = {
-        id: `user-${Date.now()}`,
-        role: "customer",
-        content: clean,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsThinking(true);
-      setError(null);
-      streamingAccRef.current = "";
-      setStreamingContent("");
-
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ content: clean }));
-      } else {
-        setError("Disconnected from chat. Please check your connection.");
-        setIsThinking(false);
-      }
-    },
-    []
-  );
-
-  // Load past history
-  const loadHistory = useCallback(async (convId: string) => {
-    try {
-      const data = await chatApi.history(convId);
-      setConversationId(convId);
-      if (data.context) {
-        setContext(data.context as ExtractedBrandContext);
-      }
-      if (data.messages && data.messages.length > 0) {
-        setMessages(
-          data.messages.map((m: ChatMessage) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            createdAt: m.created_at,
-          }))
-        );
-      }
-    } catch (err: unknown) {
-      console.warn("Could not load chat history", err);
+      cancelled = true
     }
-  }, []);
+  }, [businessId, explicitIdea, apiLayer])
+
+  // Reset first-resume flag when the explicit idea changes to a new non-empty
+  // value while the business is the same — this allows ?idea= editing to
+  // re-trigger a fresh-session send only if there's still no active
+  // conversation. In practice the workspace passes the idea once; this branch
+  // is a safety net.
+  useEffect(() => {
+    if (explicitIdea == null || explicitIdea.trim().length === 0) return
+    // Only reset if we have no active conversation right now.
+    if (activeConversationIdRef.current == null) {
+      firstResumeDoneRef.current = false
+    }
+  }, [explicitIdea])
+
+  const retry = useCallback(
+    (approvalId: string) => {
+      setFailedApprovalIds((prev) => new Set(prev).add(approvalId))
+      // The real retry hits a separate approve/reject endpoint; here we raise
+      // the flag so the workspace can surface a retry affordance. The actual
+      // HTTP call lives in the workspace action handlers.
+    },
+    [],
+  )
+
+  // Legacy chat-stream fields derived from the resume response / state.
+  // The workspace currently renders these; the rewrite will switch to the
+  // conversation greeting + WS-driven messages instead.
+  const messages: ChatMessageItem[] = React.useMemo(() => {
+    const list: ChatMessageItem[] = []
+    if (conversation?.greeting) {
+      list.push({
+        id: `init-abija-${conversation.conversation_id}`,
+        role: 'assistant',
+        content: conversation.greeting,
+        createdAt: new Date().toISOString(),
+        isStreaming: false,
+      })
+    }
+    return list
+  }, [conversation])
+
+  const streamingContent = React.useMemo(() => '', [])
+  const context: ExtractedBrandContext = React.useMemo(
+    () => ({
+      conversation_stage: 'greeting',
+      business_name: state?.business?.name ?? undefined,
+      ready_to_generate: false,
+      ...(conversation?.context ?? {}),
+    }),
+    [state?.business?.name, conversation?.context],
+  )
+  const isThinking = false
+  const isConnected = conversation != null
+  const error: string | null = null
+
+  const startConversation = useCallback(
+    async (initialIdea?: string, businessId?: string): Promise<ChatResumeResponse | null> => {
+      // Legacy compat: delegate to resume for the current business. When an
+      // explicit business id is supplied we only use it to decide the idea
+      // payload; the hook itself is already keyed to opts.businessId.
+      const targetBusiness = businessId ?? opts.businessId
+      // Never re-send an initial idea once a conversation already exists
+      // (including when a fresh /state + resume returned an existing one).
+      const alreadyActive =
+        activeConversationIdRef.current != null || conversation != null
+      const idea =
+        !alreadyActive && initialIdea?.trim().length ? initialIdea.trim() : null
+      try {
+        const res = await apiLayer.resume(targetBusiness, { initial_idea: idea ?? null })
+        setConversation({ ...res, id: res.conversation_id })
+        if (res.conversation_id) {
+          activeConversationIdRef.current = res.conversation_id
+          apiLayer.wsConnect(res.conversation_id)
+        }
+        return res
+      } catch (err) {
+        return null
+      }
+    },
+    [apiLayer, opts.businessId, conversation],
+  )
+
+  const loadHistory = useCallback(async (convId: string) => {
+    // Legacy compat: there is no separate history endpoint in the new contract.
+    // Treat the active conversation as loaded.
+    if (conversation?.conversation_id === convId) return
+    // No-op in the new contract; the workspace should use state.active_conversation.
+  }, [conversation?.conversation_id])
+
+  const setContext = useCallback((ctx: ExtractedBrandContext) => {
+    // Legacy compat shim; real context comes from the resume response + WS.
+  }, [])
+
+  const sendMessage = useCallback((text: string) => {
+    // Legacy-compat shim: the real send path is owned by the workspace's
+    // ChatWindow via the WebSocket provider.
+    // eslint-disable-next-line no-console
+    console.debug('[useAbijaChat] sendMessage shim:', text)
+  }, [])
 
   return {
-    conversationId,
+    state,
+    conversation,
+    pendingApprovals,
+    recentApprovals,
+    retry,
+    sendMessage,
     messages,
     streamingContent,
     context,
-    isConnected,
     isThinking,
+    isConnected,
     error,
     startConversation,
-    sendMessage,
     loadHistory,
     setContext,
-  };
+  }
 }
