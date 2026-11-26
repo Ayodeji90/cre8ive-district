@@ -1,0 +1,64 @@
+import { NextResponse } from "next/server";
+import { addToWaitlist, WaitlistError } from "../../../lib/waitlist";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validationError(message: string) {
+  return NextResponse.json({ error: message }, { status: 400 });
+}
+
+export async function POST(request: Request) {
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return validationError("Send a JSON body with an email address.");
+  }
+
+  if (typeof payload !== "object" || payload === null) {
+    return validationError("Send a JSON body with an email address.");
+  }
+
+  const { email, source, company, business_description: businessDescription } =
+    payload as Record<string, unknown>;
+
+  if (typeof company === "string" && company.trim() !== "") {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (typeof email !== "string") return validationError("Enter an email address.");
+  if (businessDescription !== undefined && typeof businessDescription !== "string") {
+    return validationError("Business description must be text.");
+  }
+  if (typeof businessDescription === "string" && businessDescription.length > 1000) {
+    return validationError("Business description must be 1,000 characters or fewer.");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
+    return validationError("Enter a valid email address.");
+  }
+
+  const normalizedSource =
+    typeof source === "string" && /^[a-z0-9-]{1,32}$/.test(source) ? source : "unknown";
+
+  try {
+    await addToWaitlist({
+      email: normalizedEmail,
+      source: normalizedSource,
+      business_description:
+        typeof businessDescription === "string"
+          ? businessDescription.trim() || undefined
+          : undefined,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (!(error instanceof WaitlistError)) {
+      console.error("Unexpected waitlist error", error);
+    }
+    return NextResponse.json(
+      { error: "We couldn't add you to the list. Please try again." },
+      { status: 502 },
+    );
+  }
+}

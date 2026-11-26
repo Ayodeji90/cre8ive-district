@@ -4,7 +4,7 @@ import { AuthForm } from "../../../components/auth-form";
 import { auth } from "../../../lib/auth";
 import { authQuery, resolvePostAuthPath, type AuthSearchParams } from "../../../lib/auth-redirect";
 
-export const metadata: Metadata = { title: "Create your account" };
+export const metadata: Metadata = { title: "Create your account", robots: { index: false, follow: false } };
 
 interface PageProps {
   searchParams?: Promise<AuthSearchParams>;

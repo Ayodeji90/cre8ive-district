@@ -19,9 +19,9 @@ Functional requirements describe what the system must do. Grouped by the custome
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
 | FR-1.1 | Marketing site explains the product, shows example outputs, and communicates pricing in Naira | P0 | Partial — site exists, claims need review against actual capability |
-| FR-1.2 | Waitlist form collects email and optional business description, confirms receipt | P0 | Implemented — route exists |
+| FR-1.2 | Waitlist form collects email and optional business description, confirms receipt | P0 | Implemented — platform and marketing forms use same API waitlist endpoint |
 | FR-1.3 | Marketing site loads in under 3 seconds on a 3G Nigerian mobile connection | P0 | Not verified |
-| FR-1.4 | SEO metadata, Open Graph tags, and share previews are populated for all public pages | P1 | Not verified |
+| FR-1.4 | SEO metadata, Open Graph tags, and share previews are populated for all public pages | P1 | Partial — platform home and capability pages configured; production metadata and share preview still need verification |
 | FR-1.5 | Blog or content section with at least 3 articles explaining the product value | P2 | Not started |
 
 ### FR-2: Identity and Access

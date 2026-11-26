@@ -19,11 +19,14 @@ screen actually consumes, and the order in which the apps can safely become one.
 
 | App | Port | Route | Access | Notes |
 | --- | --- | --- | --- | --- |
-| marketing | 3000 | `/` | public | Marketing page + waitlist form. Header links to platform `/sign-in` (desktop and mobile); a successful waitlist submit with a description offers `/sign-in?idea=<description>`. |
-| marketing | 3000 | `/api/waitlist` (POST) | public | Same-origin proxy; forwards `name`, `email`, `business_description` to the API. |
+| marketing | 3000 | `/` | public | Separate marketing app retained for local/reference use. The production-facing platform app now owns the public landing and waitlist entry. |
+| marketing | 3000 | `/api/waitlist` (POST) | public | Same-origin proxy; forwards `email`, `source`, and optional `business_description` to the API. |
 | marketing | 3000 | `/opengraph-image` | public | Generated OG image. |
-| platform | 3001 | `/` | public | Compatibility entry. Signed-in → `/workspace?idea=…`; anonymous → `/sign-in?next=/workspace&idea=…`. Old links and magic links keep working. |
-| platform | 3001 | `/workspace` | session | The workspace (`(workspace)` route group; layout owns the full-screen shell). Reads `?idea=` to seed the first conversation; without a session redirects to `/sign-in?next=/workspace&idea=…`. |
+| platform | 3001 | `/` | public | Idea-first landing with Abija entry and waitlist. Signed-in visitors → `/workspace`; an idea CTA opens the Abija tab, while a waitlist signup may hand its business description into sign-up. |
+| platform | 3001 | `/product/[slug]` | public | Static capability pages for brand, websites, founder control, and growth; growth roadmap content is explicitly marked in development. |
+| platform | 3001 | `/api/waitlist` (POST) | public | Same-origin proxy to the existing API waitlist endpoint; validates email and optional business description. |
+| platform | 3001 | `/opengraph-image`, `/robots.txt`, `/sitemap.xml` | public | Platform-app share image and crawler metadata for the public home and capability pages. |
+| platform | 3001 | `/workspace` | session | The workspace (`(workspace)` route group; layout owns the full-screen shell). Reads `?idea=` for a fresh conversation, resumes existing chat state, and redirects anonymous visitors to `/sign-in?next=/workspace&idea=…`. |
 | platform | 3001 | `/sign-in` | public | `(auth)` group. Reads `idea`/`next`; authenticated visitors redirect to the resolved destination (default `/workspace`). Passes a sanitised `callbackUrl` to `AuthForm` and a switch link that carries the same params. |
 | platform | 3001 | `/sign-up` | public | Same behaviour as `/sign-in`. |
 | platform | 3001 | `/welcome` | session | `(auth)` group. New-account landing from Auth.js. Forwards `callbackUrl`/`idea` to the resolved destination (default `/workspace`) instead of redirecting to a bare `/`. |
@@ -33,41 +36,39 @@ screen actually consumes, and the order in which the apps can safely become one.
 ### 1.2 Journey now
 
 ```
-marketing /  ──waitlist POST──▶  /api/waitlist  ──▶  waitlist table
-     ├─ header "Sign in" ──────────────────────────▶  platform /sign-in
-     └─ waitlist success ──▶  platform /sign-in?idea=<description>
+platform /  ──waitlist POST──▶  /api/waitlist  ──▶  waitlist table
+     ├─ idea CTA ──▶  /sign-up or /sign-in?next=/workspace&idea=…
+     └─ waitlist success + description ──▶  /sign-up?next=/workspace&idea=…
+product page ──"Start with an idea"──▶  /?start=idea#start
 
-platform /  ──session──▶  /workspace?idea=…
-platform /  ──no session──▶  /sign-in?next=/workspace&idea=…
+platform /  ──session──▶  /workspace
+platform /  ──idea handoff + no session──▶  /sign-up or /sign-in?next=/workspace&idea=…
 platform /sign-in?idea=…  ──magic link / Google──▶  /workspace?idea=…   (sanitised callbackUrl)
                           └─ brand-new account ──▶  /welcome?callbackUrl=…&idea=…  ──▶  /workspace?idea=…
-platform /workspace  ──mount──▶  new conversation, seeded with `idea` + (optional) new business
+platform /workspace  ──/state → /chat/resume──▶  existing conversation or fresh conversation seeded once with `idea`
 ```
 
-What that fixes: a visitor who describes their business can enter the platform from the
-waitlist confirmation or the header, and the text they wrote arrives as `idea` through every
-auth hop instead of being dropped.
+What that fixes: a visitor can either start with Abija immediately or save an early-access
+signup. When the visitor chooses to continue from a waitlist submission that includes a
+business description, the description arrives as `idea` through the auth handoff.
 
-What is still true (unchanged by sprint 1):
+What is still true:
 
-- The workspace starts a **new** conversation on every mount. There is no resume path and no
-  project identity, so "the same project in the workspace" is not true yet. A `Business` is
-  only created when the customer explicitly names one; the project bridge creates the
-  `Project` from that `Business`, so a returning visitor does not necessarily return to the
-  same record.
-- `idea` is input to the first message, not an identifier: it is not persisted by the auth
-  flow, and a reload of `/workspace?idea=…` only seeds the (already-started) conversation once.
-- The waitlist row is still not migrated into the workspace. The description reaches Abija
-  only when the customer takes the deep link from the success state; an invite-only signup
-  still has no server-side bridge to `business_description` (see §6).
+- The workspace resolves state and resumes chat for its active business. `idea` remains input
+  for the first fresh conversation, not a business or conversation identifier; it must not be
+  re-sent when resuming an existing conversation.
+- The waitlist row is still not migrated into the workspace. Its business description reaches
+  Abija only when the visitor chooses the follow-up workspace link; a waitlist signup does not
+  create an account or project (see §6).
 
 ### 1.3 Intended journey
 
 ```
-marketing /  ──"Start with Abija" / waitlist success──▶
-  platform /sign-in?idea=<brief>&next=/workspace  ──magic link / Google──▶
-  platform /workspace?idea=<brief>  ──▶  workspace seeded with the brief
-       └─ customer creates/selects a business → Project bridge → same project next visit
+platform /  ──"Start with Abija"──▶
+  platform /sign-up or /sign-in?idea=<brief>&next=/workspace  ──magic link / Google──▶
+  platform /workspace?idea=<brief>  ──/state → /chat/resume──▶
+      existing conversation resumes, or a fresh conversation is seeded once with the brief
+  platform /  ──email + optional description──▶  /api/waitlist  ──▶  waitlist table
 ```
 
 Handoff contract (frontend-owned, backend-neutral):

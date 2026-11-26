@@ -4,9 +4,15 @@ interface AbijaAvatarProps {
   isThinking?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
+  showStatus?: boolean;
 }
 
-export function AbijaAvatar({ isThinking = false, size = "md", className = "" }: AbijaAvatarProps) {
+export function AbijaAvatar({
+  isThinking = false,
+  size = "md",
+  className = "",
+  showStatus = true,
+}: AbijaAvatarProps) {
   const sizeClasses = {
     sm: "size-8",
     md: "size-10",
@@ -42,12 +48,14 @@ export function AbijaAvatar({ isThinking = false, size = "md", className = "" }:
         </svg>
 
         {/* Live indicator pip */}
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white ${
-            isThinking ? "bg-amber-400 animate-pulse" : "bg-emerald-500"
-          }`}
-          title={isThinking ? "Abija is typing..." : "Abija is online"}
-        />
+        {showStatus && (
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white ${
+              isThinking ? "bg-amber-400 animate-pulse" : "bg-emerald-500"
+            }`}
+            title={isThinking ? "Abija is typing..." : "Abija is online"}
+          />
+        )}
       </div>
     </div>
   );
