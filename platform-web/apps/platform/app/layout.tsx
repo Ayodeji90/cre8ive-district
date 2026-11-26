@@ -5,8 +5,8 @@ import { ApiSessionBridge } from "../components/api-session-bridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Workspace — Cre8ive District", template: "%s | Cre8ive District" },
-  description: "Your brand launch workspace with Abija.",
+  title: { default: "Cre8ive District — Build your business from the idea up", template: "%s | Cre8ive District" },
+  description: "Shape your business idea, brand, and online presence with Abija. Review every important step before it goes live.",
 };
 
 export default function PlatformLayout({ children }: Readonly<{ children: React.ReactNode }>) {
