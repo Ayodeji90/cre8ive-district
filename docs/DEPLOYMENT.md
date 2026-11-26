@@ -11,9 +11,10 @@ Staging and production run the same four images on Amazon ECS (Fargate):
 | `run-engine` | `ghcr.io/<owner>/cre8ive-run-engine` | no (service discovery) | `GET /health`, `GET /ready` |
 
 Postgres is RDS, Redis is ElastiCache, and object storage stays on Cloudflare
-R2. The frontend stays on Vercel. The Vercel project must use the repository
-root as its Root Directory; [`vercel.json`](../vercel.json) installs from
-`platform-web/` and builds `@cre8ive/platform`, not the marketing app.
+R2. The frontend stays on Vercel. The platform Vercel project must set its Root
+Directory to `platform-web/apps/platform`; its [`vercel.json`](../platform-web/apps/platform/vercel.json)
+installs the `platform-web` workspace with pnpm 9.15.9 and builds the platform
+Next.js app, not the marketing app.
 Customer sites use the Vercel-managed wildcard domain `*.cre8ivedistrict.app`;
 the Website Agent's `PRIMARY_DOMAIN_SUFFIX` must remain `cre8ivedistrict.app`
 in staging and production.
