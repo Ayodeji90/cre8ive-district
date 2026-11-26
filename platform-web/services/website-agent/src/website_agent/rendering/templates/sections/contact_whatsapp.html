@@ -1,0 +1,14 @@
+<section class="section">
+  <div class="container" style="max-width: 720px; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 1.5rem;">💬</div>
+    <h2 style="font-size: clamp(2rem, 4vw, 2.75rem); margin-bottom: 1rem;">
+      {{ section.props.heading or 'Chat Directly with Us' }}
+    </h2>
+    <p style="font-size: 1.15rem; color: var(--brand-neutral-700); margin-bottom: 2rem; line-height: 1.6;">
+      {{ section.props.description or 'Skip the long forms. We answer fast on WhatsApp to discuss your project, prices, and timeline.' }}
+    </p>
+    <a href="https://wa.me/{{ site.business.whatsapp_number }}?text=Hello%20{{ site.brand.name }}!%20I'd%20like%20to%20learn%20more." class="btn btn-accent" style="font-size: 1.1rem; padding: 1rem 2.25rem;" target="_blank" rel="noopener">
+      Open WhatsApp Conversation
+    </a>
+  </div>
+</section>

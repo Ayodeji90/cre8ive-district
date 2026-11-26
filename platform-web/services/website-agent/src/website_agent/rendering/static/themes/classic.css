@@ -1,0 +1,12 @@
+/* Theme: Classic — refined, trusted, editorial */
+:root {
+  --theme-radius: 4px;
+  --theme-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  --theme-shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.08);
+  --theme-border: 1px solid rgba(0, 0, 0, 0.12);
+  --theme-heading-weight: 500;
+  --theme-body-line-height: 1.75;
+  --theme-section-padding: 6rem;
+  --theme-transition: 0.3s ease;
+  --theme-button-radius: 2px;
+}

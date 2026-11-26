@@ -43,7 +43,13 @@ class StubAIService:
             yield GREETING
             return
         stage = conversation_context.get("conversation_stage", "greeting")
-        if stage == "summary_confirm":
+        if stage in ("greeting", "business_description"):
+            yield f"I love that concept! {new_message[:40]}... has huge potential. Who is your ideal customer for this?"
+        elif stage in ("industry_refine", "target_audience"):
+            yield "Got it! That audience will love this. When they see your brand, how should it feel? Bold and vibrant, or sleek and minimal?"
+        elif stage == "style_preferences":
+            yield "Everything is clicking into place! A vibrant, modern brand with unmistakable character. Ready for me to create your brand and website?"
+        elif stage in ("summary_confirm", "complete"):
             yield "Perfect. I'm on it — give me about a minute to put your brand together."
         else:
             yield (
@@ -51,19 +57,28 @@ class StubAIService:
             )
 
     async def extract_context(self, message_history: list[dict]) -> dict:
-        turns = sum(1 for m in message_history if m.get("role") == "user")
+        turns = sum(1 for m in message_history if m.get("role") in ("user", "customer"))
+        last_msg = (message_history[-1].get("content") or "").lower() if message_history else ""
+        confirmed = any(
+            word in last_msg
+            for word in ["yes", "ready", "build", "launch", "create", "go ahead", "let's go"]
+        )
+
         stage = "greeting"
         if turns >= 1:
             stage = "business_description"
+        if turns >= 2:
+            stage = "target_audience"
         if turns >= 3:
-            stage = "industry_refine"
-        if turns >= 5:
             stage = "style_preferences"
-        if turns >= 7:
+        if turns >= 4 or confirmed:
             stage = "summary_confirm"
+        if confirmed and turns >= 3:
+            stage = "complete"
+
         return {
             "conversation_stage": stage,
-            "ready_to_generate": turns >= 8,
+            "ready_to_generate": stage in ("summary_confirm", "complete") or turns >= 5,
         }
 
     async def generate_strategy(

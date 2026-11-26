@@ -1,0 +1,71 @@
+graph LR
+    subgraph Clients["Client Layer"]
+        MKT["Marketing Site\nNext.js 15"]
+        PLT["Platform App\nNext.js 15"]
+        ADM["Admin Dashboard\nNext.js 15"]
+    end
+
+    subgraph Gateway["API Gateway"]
+        CORS["CORS Middleware"]
+        AUTH["Auth Layer\nNextAuth v5"]
+        API["FastAPI\nPython 3.12"]
+    end
+
+    subgraph Services["Service Layer"]
+        CHAT["Chat Service\nAbija AI Mascot"]
+        BRAND["Brand Generator\nOrchestrator"]
+        BILL["Billing Service"]
+        REV["Review Queue\nDesigner Approval"]
+        ASSET["Asset Pipeline\nLogo / PDF / ZIP"]
+        DLVR["Delivery Service\nEmail + Download"]
+    end
+
+    subgraph AI["AI Layer"]
+        LLM["LLM Provider\nClaude Sonnet 5.5"]
+        IMG["Image Gen\nIdeogram 3"]
+        PROMPT["Prompt System\nJinja2 Templates"]
+        VALID["Quality Validator\nWCAG + Resolution"]
+    end
+
+    subgraph Data["Data Layer"]
+        PG["PostgreSQL 16\nNeon"]
+        RD["Redis 7\nUpstash"]
+        R2["Cloudflare R2\nAsset Storage"]
+    end
+
+    subgraph External["External Services"]
+        PS["Paystack\nNaira Billing"]
+        RS["Resend\nTransactional Email"]
+        VCL["Vercel\nGenerated Sites"]
+        GF["Google Fonts\nFont Verification"]
+    end
+
+    MKT --> CORS
+    PLT --> CORS
+    ADM --> CORS
+    CORS --> AUTH
+    AUTH --> API
+
+    API --> CHAT
+    API --> BRAND
+    API --> BILL
+    API --> REV
+    API --> ASSET
+    API --> DLVR
+
+    CHAT --> LLM
+    BRAND --> LLM
+    BRAND --> IMG
+    BRAND --> PROMPT
+    BRAND --> VALID
+
+    CHAT --> RD
+    BRAND --> PG
+    REV --> PG
+    ASSET --> R2
+    BILL --> PS
+    DLVR --> RS
+
+    REV -->|"approve"| ASSET
+    ASSET -->|"render done"| DLVR
+    BRAND -->|"generate"| REV

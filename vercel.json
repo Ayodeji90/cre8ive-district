@@ -1,11 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd platform-web && corepack pnpm@9.15.9 install --frozen-lockfile",
+  "buildCommand": "cd platform-web && corepack pnpm@9.15.9 --filter @cre8ive/platform build",
+  "outputDirectory": "platform-web/apps/platform/.next",
   "cleanUrls": true,
-  "trailingSlash": false,
-  "redirects": [
-    {
-      "source": "/About",
-      "destination": "/about",
-      "permanent": true
-    }
-  ]
+  "trailingSlash": false
 }

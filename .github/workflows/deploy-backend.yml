@@ -1,0 +1,259 @@
+name: "Deploy · Backend"
+
+# Publishes image digests and promotes them through ECS environments:
+#   CI (main) -> build -> staging (migrate, deploy, smoke) -> production
+#
+# Production is gated by the `production` GitHub Environment's required
+# reviewers. Images are only published after "CI · Backend" succeeds on main.
+# Rollback: run "Rollback · Backend" with the four digests from the release summary.
+
+on:
+  workflow_run:
+    workflows: ["CI · Backend"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Main-branch ref with a successful backend CI run; deploys to staging only.
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  preflight:
+    name: Resolve release
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      tag: ${{ steps.meta.outputs.tag }}
+      image_prefix: ${{ steps.meta.outputs.image_prefix }}
+      deploy: ${{ steps.changes.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.ref || github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Resolve commit and image tag
+        id: meta
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${sha:0:12}" >> "$GITHUB_OUTPUT"
+          echo "image_prefix=$(printf 'ghcr.io/%s/cre8ive' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "Releasing $sha (sha-${sha:0:12})"
+
+      - name: Require successful main CI for manual staging releases
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          set -euo pipefail
+          runs=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci-backend.yml/runs?head_sha=${SHA}&branch=main&event=push&status=success&per_page=100" \
+            --jq '.workflow_runs | length')
+          if [ "$runs" -lt 1 ]; then
+            echo "::error::No successful CI · Backend push run exists on main for $SHA"
+            exit 1
+          fi
+          echo "Verified $runs successful main CI run(s) for $SHA"
+
+      - name: Detect backend changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch: deploying."
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            files=$(git diff --name-only HEAD^1 HEAD)
+          else
+            files=$(git show --name-only --pretty=format: HEAD)
+          fi
+          echo "$files" | sed 's/^/  /'
+          if echo "$files" | grep -Eq '^(platform-web/(api|services)/|platform-web/docker-compose\.yml$|platform-web/api/\.dockerignore$|\.github/workflows/(ci-backend|deploy-backend|_deploy-ecs)\.yml$|\.github/actions/)'; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "No backend changes in this commit; skipping deploy."
+          fi
+
+  build:
+    name: "Build & push · ${{ matrix.service.tag }}"
+    needs: preflight
+    if: needs.preflight.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { context: "platform-web/api", tag: "api" }
+          - { context: "platform-web/services/branding-agent", tag: "branding-agent" }
+          - { context: "platform-web/services/website-agent", tag: "website-agent" }
+          - { context: "platform-web/services/run-engine", tag: "run-engine" }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+
+      - uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
+
+      - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        id: meta
+        with:
+          images: ${{ needs.preflight.outputs.image_prefix }}-${{ matrix.service.tag }}
+          tags: |
+            type=raw,value=${{ needs.preflight.outputs.tag }}
+
+      - uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        id: push
+        with:
+          context: ${{ matrix.service.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.service.tag }}
+          cache-to: type=gha,scope=${{ matrix.service.tag }},mode=max
+
+      - name: Save pushed image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Build did not return a valid image digest"
+            exit 1
+          fi
+          printf '%s\n' "$IMAGE_DIGEST" > "$RUNNER_TEMP/image-digest.txt"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: image-digest-${{ matrix.service.tag }}
+          path: ${{ runner.temp }}/image-digest.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  resolve-images:
+    name: Resolve immutable image digests
+    needs: [preflight, build]
+    if: needs.preflight.outputs.deploy == 'true' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      api_digest: ${{ steps.collect.outputs.api_digest }}
+      branding_agent_digest: ${{ steps.collect.outputs.branding_agent_digest }}
+      website_agent_digest: ${{ steps.collect.outputs.website_agent_digest }}
+      run_engine_digest: ${{ steps.collect.outputs.run_engine_digest }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: image-digest-*
+          path: digests
+          merge-multiple: false
+
+      - name: Validate digests and publish release manifest
+        id: collect
+        env:
+          IMAGE_PREFIX: ${{ needs.preflight.outputs.image_prefix }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          RELEASE_SHA: ${{ needs.preflight.outputs.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          images = {
+              "api": "api_digest",
+              "branding-agent": "branding_agent_digest",
+              "website-agent": "website_agent_digest",
+              "run-engine": "run_engine_digest",
+          }
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          with output.open("a") as outputs, summary.open("a") as report:
+              report.write(f"## Release {os.environ['RELEASE_TAG']}\n\n")
+              report.write(f"Commit: `{os.environ['RELEASE_SHA']}`\n\n")
+              report.write("| Image | Digest reference |\n| --- | --- |\n")
+              for image, output_name in images.items():
+                  digest = (
+                      Path("digests", f"image-digest-{image}", "image-digest.txt")
+                      .read_text()
+                      .strip()
+                  )
+                  if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+                      raise SystemExit(f"Invalid digest for {image}: {digest!r}")
+                  reference = f"{os.environ['IMAGE_PREFIX']}-{image}@{digest}"
+                  outputs.write(f"{output_name}={digest}\n")
+                  report.write(f"| `{image}` | `{reference}` |\n")
+          PY
+
+  deploy-staging:
+    name: "Staging"
+    needs: [preflight, build, resolve-images]
+    if: >
+      needs.preflight.outputs.deploy == 'true' && needs.build.result == 'success' &&
+      needs.resolve-images.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-ecs.yml
+    with:
+      environment: staging
+      api_digest: ${{ needs.resolve-images.outputs.api_digest }}
+      branding_agent_digest: ${{ needs.resolve-images.outputs.branding_agent_digest }}
+      website_agent_digest: ${{ needs.resolve-images.outputs.website_agent_digest }}
+      run_engine_digest: ${{ needs.resolve-images.outputs.run_engine_digest }}
+      run_migrations: true
+
+  deploy-production:
+    name: "Production"
+    needs: [preflight, build, resolve-images, deploy-staging]
+    if: >
+      always() && github.event_name == 'workflow_run' &&
+      needs.preflight.outputs.deploy == 'true' && needs.build.result == 'success' &&
+      needs.resolve-images.result == 'success' && needs.deploy-staging.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-ecs.yml
+    with:
+      environment: production
+      api_digest: ${{ needs.resolve-images.outputs.api_digest }}
+      branding_agent_digest: ${{ needs.resolve-images.outputs.branding_agent_digest }}
+      website_agent_digest: ${{ needs.resolve-images.outputs.website_agent_digest }}
+      run_engine_digest: ${{ needs.resolve-images.outputs.run_engine_digest }}
+      run_migrations: true

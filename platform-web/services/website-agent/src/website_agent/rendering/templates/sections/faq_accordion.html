@@ -1,0 +1,22 @@
+<section class="section section-alt">
+  <div class="container" style="max-width: 800px;">
+    <div style="text-align: center; margin-bottom: 3.5rem;">
+      <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 1rem;">
+        {{ section.props.heading or 'Frequently Asked Questions' }}
+      </h2>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      {% for item in section.props['items'] %}
+        <details style="background-color: var(--brand-bg, #fff); padding: 1.5rem; border-radius: var(--theme-radius, 8px); box-shadow: var(--theme-shadow, none); cursor: pointer;">
+          <summary style="font-weight: 700; font-size: 1.1rem; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+            <span>{{ item.question }}</span>
+            <span style="font-size: 1.25rem; color: var(--brand-accent);">+</span>
+          </summary>
+          <p style="margin-top: 1rem; color: var(--brand-neutral-700); line-height: 1.6; font-size: 0.95rem;">
+            {{ item.answer }}
+          </p>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>

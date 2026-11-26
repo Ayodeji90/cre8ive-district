@@ -1,0 +1,12 @@
+{
+  "name": "@cre8ive/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind-preset": "./tailwind-preset.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" }
+}

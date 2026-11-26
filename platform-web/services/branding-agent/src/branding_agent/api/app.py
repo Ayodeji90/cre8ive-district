@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         app.state.storage = build_storage(settings)
     except StorageNotConfigured:
-        if settings.ENV != "development":
+        if settings.ENV not in ("development", "local", "test"):
             raise
         app.state.storage = LocalStorage()
     yield
@@ -112,6 +112,12 @@ def require_service_key(x_agent_key: str | None = Header(default=None)) -> None:
 
 @app.get("/health", tags=["health"])
 async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "branding-agent"}
+
+
+@app.get("/v1/ping", tags=["health"], dependencies=[Depends(require_service_key)])
+async def ping() -> dict[str, str]:
+    """Authenticated liveness probe: proves reachability and key agreement."""
     return {"status": "ok", "service": "branding-agent"}
 
 

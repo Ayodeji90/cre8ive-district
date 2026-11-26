@@ -1,6 +1,15 @@
 .vercel
 .gstack/
+.env
+.env.*
+!.env.example
+# Repomix dump of the repository; generated locally, never committed.
+codebase.md
 **/.venv/
 **/__pycache__/
 *.py[cod]
 **/.pytest_cache/
+
+# Local virtualenvs and runtime temp logs
+api-venv/
+.tmp/
